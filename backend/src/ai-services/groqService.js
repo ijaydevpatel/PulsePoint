@@ -51,56 +51,64 @@ export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwe
  * Groq LPU Streaming Service
  */
 export const callGroqStream = async (prompt, systemInstruction = '', model = 'qwen/qwen3-32b', onChunk) => {
-  try {
-    if (!process.env.GROQ_API_KEY) throw new Error('Groq API Key missing');
+  return new Promise(async (resolve, reject) => {
+    try {
+      if (!process.env.GROQ_API_KEY) throw new Error('Groq API Key missing');
 
-    let groqModelId = model;
-    if (model.toLowerCase().includes('qwen')) groqModelId = 'qwen/qwen3-32b';
+      let groqModelId = model;
+      if (model.toLowerCase().includes('qwen')) groqModelId = 'qwen/qwen3-32b';
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: groqModelId,
-        messages: [
-          ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
-          { role: 'user', content: prompt }
-        ],
-        stream: true,
-        temperature: 0.5
-      })
-    });
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: groqModelId,
+          messages: [
+            ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
+            { role: 'user', content: prompt }
+          ],
+          stream: true,
+          temperature: 0.5
+        })
+      });
 
-    if (!response.ok) throw new Error(`Groq Stream Error: ${response.statusText}`);
+      if (!response.ok) throw new Error(`Groq Stream Error: ${response.statusText}`);
 
-    // Standard ReadableStream consumption
-    const reader = response.body;
-    let buffer = '';
-
-    reader.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n');
-      for (const line of lines) {
-        if (line.trim() === 'data: [DONE]') {
-          onChunk(null);
-          return;
-        }
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            const text = data.choices[0]?.delta?.content || '';
-            if (text) onChunk(text);
-          } catch (e) {
-            // Partial chunk
+      // Node-Fetch v3 uses async iterator for body
+      for await (const chunk of response.body) {
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') {
+            if (trimmed === 'data: [DONE]') {
+              onChunk(null);
+              resolve();
+            }
+            continue;
+          }
+          
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(trimmed.slice(6));
+              const text = data.choices[0]?.delta?.content || '';
+              if (text) onChunk(text);
+            } catch (e) {
+              // Partial JSON chunk, ignore or buffer if needed
+            }
           }
         }
       }
-    });
 
-  } catch (error) {
-    console.error('[GroqStream] Error:', error.message);
-    onChunk(null);
-  }
+      onChunk(null);
+      resolve();
+
+    } catch (error) {
+      console.error('[GroqStream] Error:', error.message);
+      onChunk(null);
+      reject(error);
+    }
+  });
 };

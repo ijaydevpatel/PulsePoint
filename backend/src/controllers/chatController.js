@@ -1,4 +1,4 @@
-import { executeModelChain, callOllamaStream } from '../model-router/orchestrator.js';
+import { executeModelChain, callOllamaStream, callGroqStream } from '../model-router/orchestrator.js';
 import Profile from '../models/Profile.js';
 import ChatSession from '../models/ChatSession.js';
 
@@ -11,8 +11,9 @@ export const sendMessage = async (req, res) => {
 
     if (!message) return res.status(400).json({ message: 'Message Payload Empty' });
 
+    if (!req.user?._id) return res.status(401).json({ message: 'Unauthorized session. Please log in.' });
     const profile = await Profile.findOne({ user: req.user._id });
-    if (!profile) return res.status(400).json({ message: 'Unverified Profile Linkage.' });
+    if (!profile) return res.status(404).json({ message: 'Unverified Profile Linkage.' });
 
     let session;
     if (sessionId) {
@@ -75,6 +76,7 @@ export const streamMessage = async (req, res) => {
     const { message, sessionId } = req.body;
     if (!message) return res.status(400).json({ message: 'Message Payload Empty' });
 
+    if (!req.user?._id) return res.status(401).json({ message: 'Unauthorized session. Please log in.' });
     const profile = await Profile.findOne({ user: req.user._id });
     
     // Set headers for SSE
@@ -112,6 +114,11 @@ export const streamMessage = async (req, res) => {
 
   } catch (error) {
     console.error('Stream Controller Error:', error);
+    try {
+      const fs = await import('fs');
+      fs.appendFileSync('backend_errors.log', `[Stream Error] ${new Date().toISOString()}: ${error.name} - ${error.message}\n${error.stack}\n\n`);
+    } catch (e) {}
+    
     if (!res.headersSent) res.status(500).json({ message: 'Stream Fault', error: error.message });
     else res.end();
   }
