@@ -4,7 +4,7 @@
 PulsePoint/
 ├── backend/                # Express.js API & AI Orchestration
 │   ├── src/
-│   │   ├── ai-services/    # Ollama integration (ollamaService.js)
+│   │   ├── ai-services/    # Cloud AI Orchestration (Groq/Gemini)
 │   │   ├── controllers/    # Request handlers (chat, symptoms, medicine)
 │   │   ├── model-router/   # AI routing logic (orchestrator.js)
 │   │   ├── routes/         # API Endpoint definitions

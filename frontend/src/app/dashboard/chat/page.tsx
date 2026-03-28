@@ -91,7 +91,7 @@ export default function ChatPage() {
                    ? 'bg-primary text-white rounded-tr-none border-primary/20 shadow-float' 
                    : 'bg-surface-glass border-border-glass rounded-tl-none text-text-primary backdrop-blur-md'
                 }`}>
-                 <p className="text-sm leading-relaxed">{msg.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                </div>
              </div>
            ))}

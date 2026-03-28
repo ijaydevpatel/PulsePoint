@@ -25,8 +25,17 @@ export const checkMedicineCompatibility = async (req, res) => {
       return res.status(400).json({ message: 'Input Fault: Requires Dual Medicine String Maps.' });
     }
 
-    const profile = await Profile.findOne({ user: req.user._id });
-    if (!profile) return res.status(400).json({ message: 'Unverified Profile Execution Block.' });
+    let profile = await Profile.findOne({ user: req.user._id });
+
+    // Resilient Fallback: Use standard metrics if profile is missing to ensure stability
+    if (!profile) {
+      console.warn(`[DiagnosticEngine] Profile missing for user ${req.user._id}. Using Guest Baseline.`);
+      profile = {
+        age: 30,
+        weight: 75,
+        allergies: []
+      };
+    }
 
     const med1 = primaryMedicine.toLowerCase().trim();
     const med2 = secondaryMedicine.toLowerCase().trim();
@@ -43,8 +52,8 @@ export const checkMedicineCompatibility = async (req, res) => {
     }
 
     // Checking against User Profile Allergies natively without LLM mapping
-    const hasAllergy1 = profile.allergies.some(a => med1.includes(a.toLowerCase()));
-    const hasAllergy2 = profile.allergies.some(a => med2.includes(a.toLowerCase()));
+    const hasAllergy1 = (profile.allergies || []).some(a => med1.includes(a.toLowerCase()));
+    const hasAllergy2 = (profile.allergies || []).some(a => med2.includes(a.toLowerCase()));
 
     if (hasAllergy1 || hasAllergy2) {
         hardcodedRiskLevel = "Critical";
@@ -53,77 +62,87 @@ export const checkMedicineCompatibility = async (req, res) => {
     }
 
     // 2. ONLY USE LLM FOR EXPLANATION (Never rely on LLM to determine safety)
-    const systemInstruction = `You are a medical JSON API. You MUST respond with ONLY a valid JSON object. Do NOT include any text before or after the JSON. Do NOT include markdown or code fences.
+    const systemInstruction = `You are a medical JSON API for non-medical users. You MUST respond with ONLY a valid JSON object. 
+    Explain everything in simple, plain English using everyday analogies (e.g., your liver is like a filter, blood is like water in pipes). 
+    DO NOT use markdown bolding (no **). Keep all text normal.
 
-Return this exact JSON structure with real values filled in:
+Return this exact JSON structure:
 {
-  "explanation": "Write one paragraph in plain English explaining what happens inside the body when ${med1} and ${med2} are taken together. Start with absorption, then describe metabolic interaction, then physiological effects.",
-  "ingredients1": ["mandatory full list of ALL active pharmaceutical ingredients (APIs), chemical compounds, and major excipients found in ${med1}"],
-  "ingredients2": ["mandatory full list of ALL active pharmaceutical ingredients (APIs), chemical compounds, and major excipients found in ${med2}"],
-  "interactionCause": "Identify the EXACT active ingredients in ${med1} and ${med2} that are responsible for the ${hardcodedRiskLevel} risk level. Explain clearly which ingredient from which medicine is interacting and how it specifically leads to the ${hardcodedRiskLevel} risk status. (Example: 'The Acetylsalicylic Acid in Aspirin and the Warfarin Sodium in Warfarin interact to significantly increase bleeding risk, which is why this combination is flagged as ${hardcodedRiskLevel} risk.').",
-  "safeAlternatives": ["safer drug name 1 with reason", "safer drug name 2 with reason"],
-  "warnings": ["specific named physiological risk with mechanism", "another specific named risk"]
+  "explanation": "One paragraph in plain English. Use analogies. No jargon. No bolding.",
+  "ingredients1": ["API list for ${med1}"],
+  "ingredients2": ["API list for ${med2}"],
+  "interactionCause": "Explain clearly which ingredients are clashing. If they are the same ingredient (overlap), explain the risk of 'double dosing'. No bolding.",
+  "detectedRisk": "Low, Medium, High, or Critical based on your analysis of these specific drugs.",
+  "safeAlternatives": ["alternative 1 with reason", "alternative 2 with reason"],
+  "warnings": ["specific risk 1", "specific risk 2"]
 }`;
 
-    const promptText = `Medicine A: ${med1}. Medicine B: ${med2}. Risk level: ${hardcodedRiskLevel}. Patient age: ${profile.age}, weight: ${profile.weight}kg. Return JSON only.`;
+    const promptText = `Medicine A: ${med1}. Medicine B: ${med2}. System Baseline Risk: ${hardcodedRiskLevel}. Patient: ${profile.age}yo, ${profile.weight}kg. Return JSON only. No bolding.`;
 
     // 3. Fallback Orchestrator Deployment
     let parsedResponse = {};
     try {
       const rawAiResponse = await executeModelChain('MEDICINE_EXPLANATION', promptText, systemInstruction);
-      console.log('[Medicine] Raw LLM response (first 500 chars):', rawAiResponse?.substring(0, 500));
-
+      
       try {
-        // Robust JSON Extraction for Cloud Models (Groq/Qwen)
-        // Strip DeepSeek <think> tags if present
         let cleaned = rawAiResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-        
-        // Find the first '{' and the last '}' to isolate the JSON object
         const startIdx = cleaned.indexOf('{');
         const endIdx = cleaned.lastIndexOf('}');
-        
-        if (startIdx === -1 || endIdx === -1) {
-          throw new Error("No JSON boundaries found in AI medicine response.");
+        if (startIdx !== -1 && endIdx !== -1) {
+          const jsonStr = cleaned.substring(startIdx, endIdx + 1);
+          parsedResponse = JSON.parse(jsonStr);
+        } else {
+          throw new Error('No JSON found');
         }
-        
-        const jsonStr = cleaned.substring(startIdx, endIdx + 1);
-        parsedResponse = JSON.parse(jsonStr);
-        console.log('[MedicineController] Successfully parsed neural response.');
       } catch (parseErr) {
-        console.error('LLM Syntax Parsing Failure:', parseErr);
-        console.error('Raw Response context:', rawAiResponse?.substring(0, 200));
-        // Don't crash - return hardcoded data with fallback explanation
+        console.error('[MedicineController] JSON Parsing Failure:', parseErr);
+        console.error('[MedicineController] Raw AI Response (first 500 chars):', rawAiResponse.substring(0, 500));
         parsedResponse = {
-          explanation: `The detailed interaction analysis between ${med1} and ${med2} could not be fully parsed at this time. Risk level has been determined to be ${hardcodedRiskLevel} based on our internal safety protocols.`,
+          explanation: `The internal analysis for ${med1} and ${med2} is being simplified for you. Risk is ${hardcodedRiskLevel}.`,
           ingredients1: [med1],
           ingredients2: [med2],
-          interactionCause: isContraindicated ? `${med1} and ${med2} are known contraindicated substances.` : 'No known direct contraindication detected in primary database.',
-          safeAlternatives: ["Consult a pharmacist for verified alternatives"],
-          warnings: isContraindicated ? ['These medicines should not be combined.'] : ["Maintain standard dosage protocols"]
+          interactionCause: isContraindicated ? 'These medicines are not a good match.' : 'No major clash found in our primary list.',
+          detectedRisk: hardcodedRiskLevel,
+          safeAlternatives: ["Consult your local pharmacist"],
+          warnings: ["Take care with dosing"]
         };
       }
     } catch (llmErr) {
-      console.error('LLM Orchestrator Failure:', llmErr);
+      console.error('[MedicineController] AI Inference Failure:', llmErr);
       parsedResponse = {
-        explanation: `AI analysis temporarily unavailable. Risk level: ${hardcodedRiskLevel} (determined by rule engine).`,
+        detectedRisk: hardcodedRiskLevel,
+        explanation: `Analysis is currently limited. Baseline risk is ${hardcodedRiskLevel}.`,
         ingredients1: [med1],
         ingredients2: [med2],
-        interactionCause: isContraindicated ? `${med1} and ${med2} are known contraindicated substances.` : 'No known direct contraindication.',
+        interactionCause: 'System baseline check only.',
         safeAlternatives: [],
-        warnings: isContraindicated ? ['These medicines should not be combined.'] : []
+        warnings: []
       };
     }
 
-    // 4. Force inject Native Rules over LLM Outputs ensuring ultra-safe payload isolation
+    // 4. Resolve Contradictions: Use the higher of hardcoded or detected risk
+    const riskMap = { "Low": 1, "Medium": 2, "High": 3, "Critical": 4 };
+    const detectedRiskVal = riskMap[parsedResponse.detectedRisk] || 1;
+    const hardcodedRiskVal = riskMap[hardcodedRiskLevel] || 1;
+    
+    const finalRisk = (detectedRiskVal > hardcodedRiskVal) 
+      ? parsedResponse.detectedRisk 
+      : hardcodedRiskLevel;
+
+    const finalVerdict = (finalRisk === "High" || finalRisk === "Critical") 
+      ? "Interaction Warning" 
+      : (finalRisk === "Medium") ? "Caution Advised" : "Generally Safe";
+
     res.json({
-       compatibilityVerdict: hardcodedVerdict,
-       riskLevel: hardcodedRiskLevel,
-       dangerDetected: isContraindicated,
-       conflictFlags: isContraindicated ? ["Direct Contradiction Rule Breached"] : [],
+       compatibilityVerdict: finalVerdict,
+       riskLevel: finalRisk,
+       dangerDetected: (finalRisk === "High" || finalRisk === "Critical"),
+       conflictFlags: isContraindicated ? ["Direct Database Match"] : [],
        ...parsedResponse
     });
 
   } catch (error) {
+    console.error('[MedicineController] Framework Fault:', error.stack);
     res.status(500).json({ message: 'Medicine Engine Fault', error: error.message });
   }
 };

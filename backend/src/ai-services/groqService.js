@@ -13,7 +13,6 @@ export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwe
     // Map common names to Groq-specific IDs
     let groqModelId = model;
     if (model.toLowerCase().includes('qwen')) groqModelId = 'qwen/qwen3-32b';
-    if (model.toLowerCase().includes('deepseek')) groqModelId = 'deepseek-r1-distill-llama-70b';
 
     console.log(`[GroqService] Calling Cloud LPU | Model: ${groqModelId}`);
 
@@ -40,6 +39,7 @@ export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwe
     }
 
     const data = await response.json();
+    console.log('[GroqService] Raw API Response:', JSON.stringify(data).substring(0, 200));
     return data.choices[0]?.message?.content || '';
   } catch (error) {
     console.error('[GroqService] Error:', error.message);

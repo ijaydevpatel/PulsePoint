@@ -133,7 +133,7 @@ export default function SymptomsPage() {
                       </motion.span>
                     </AnimatePresence>
                   </span>
-                  <span className="text-[10px] opacity-60 mt-1 font-bold uppercase tracking-widest">Harnessing 4 Neural Models</span>
+                  <span className="text-[10px] opacity-60 mt-1 font-bold uppercase tracking-widest">Harnessing Groq & Gemini Core</span>
                 </span>
               ) : "Run Diagnostic Analysis"}
             </button>

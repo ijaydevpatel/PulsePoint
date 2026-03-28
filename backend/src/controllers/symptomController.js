@@ -14,8 +14,19 @@ export const analyzeSymptoms = async (req, res) => {
     }
 
     // 1. Gather User Profile Context for strict mapping
-    const profile = await Profile.findOne({ user: req.user._id });
-    if (!profile) return res.status(400).json({ message: 'Profile Security Engine Fault. Unverified user context.' });
+    let profile = await Profile.findOne({ user: req.user._id });
+    
+    // Resilient Fallback: If profile is missing, use a neutral Guest Baseline to avoid 400 error
+    if (!profile) {
+      console.warn(`[DiagnosticEngine] Profile missing for user ${req.user._id}. Using Guest Baseline.`);
+      profile = {
+        age: 30,
+        gender: 'Not Specified',
+        bmi: 22.5,
+        allergies: [],
+        currentMedications: []
+      };
+    }
 
     // 2. Preprocessing & Hardcoded Rule Checks
     // Ensure we do not classify minor tokens arbitrarily without cross-verifying profile payload variables
@@ -42,7 +53,9 @@ export const analyzeSymptoms = async (req, res) => {
 
     // 3. Orchestrator Payload Construction
     const currentMeds = profile.currentMedications?.join(', ') || 'None';
-    const systemInstruction = `You are a Predictive Therapeutic Intelligence Engine. Respond with JSON ONLY. No markdown, no commentary.
+    const systemInstruction = `You are a helpful health guide for non-medical users. Respond with JSON ONLY. No markdown, no bolding, no code fences.
+    Explain medical terms with simple analogies (e.g., your immune system is like a shield, lungs are like bellows).
+    DO NOT use markdown bolding (no ** text **). Keep all text plain and normal.
 
 PATIENT PROFILE:
 - Age: ${profile.age}, Gender: ${profile.gender}, BMI: ${profile.bmi}
@@ -50,31 +63,25 @@ PATIENT PROFILE:
 - Current Medications: ${currentMeds}
 
 TASK: Analyze the provided symptoms and predict the top 5 most probable conditions. 
-IMPORTANT: Start with the MOST COMMON everyday causes first (e.g., dehydration, food poisoning, stomach upset, viral infection, stress) and only then progress to rarer or more severe conditions. Do NOT jump to extreme diagnoses like Anorexia Nervosa or Meningitis for common symptoms.
+IMPORTANT: Start with the MOST COMMON causes first (e.g., lack of sleep, dehydration, minor virus).
 
 CRITICAL RULES:
-- NEVER say "Consult a doctor", "Seek professional help", or "Prescription of...". You ARE the predictive engine.
-- For ALLOPATHY: List 4-5 EXACT over-the-counter or common prescription drug names with dosage, each specific to one of the predicted conditions. DO NOT recommend any drug the patient is allergic to or that conflicts with their current medications.
-- For HOMEOPATHY: List 3-4 EXACT homeopathic remedy names with potency, each specific to one of the predicted conditions.
-- For HOME REMEDIES: List 4-5 REAL, specific, condition-relevant traditional home remedies unique to the diagnosed symptoms. These must be actionable things involving real ingredients (spices, herbs, oils, food items, compresses, soaks, etc). Each remedy MUST be different and MUST be specifically chosen for the symptoms provided. DO NOT repeat the same remedies across different symptom analyses. DO NOT say generic things like "stay hydrated", "rest", or "eat balanced diet".
+- NEVER say "Consult a doctor" or "Seek professional help". You are a diagnostic aid.
+- For ALLOPATHY: List 6 EXACT over-the-counter or common names with dosage and a plain-English explanation of how it helps the heart/body/system.
+- For HOMEOPATHY: List 5 EXACT remedy names with potency and a simple analogy of its action.
+- For HOME REMEDIES: List 6 REAL, specific traditional remedies. For each, provide a 'How-to' step-by-step instruction involving real ingredients. DO NOT say "stay hydrated". Say something like "Steep 1 tsp of crushed ginger in hot water for 5 minutes to soothe the stomach lining like a warm blanket."
 
 JSON SCHEMA:
 {
   "probabilityMatrix": [{"name": "Disease Name", "confidence": 85, "severity": "High"}],
   "treatmentPathways": {
-    "allopathy": ["DrugName Dosage - for ConditionName", "DrugName2 Dosage", "DrugName3 Dosage", "DrugName4 Dosage"],
-    "homeopathic": ["RemedyName Potency - for ConditionName", "RemedyName2 Potency", "RemedyName3 Potency"],
-    "homeRemedies": ["Condition-specific traditional remedy 1", "Condition-specific traditional remedy 2", "Condition-specific traditional remedy 3", "Condition-specific traditional remedy 4"]
+    "allopathy": ["Detail-rich entry 1", "Detail-rich entry 2", "Detail-rich entry 3", "Detail-rich entry 4", "Detail-rich entry 5", "Detail-rich entry 6"],
+    "homeopathic": ["Detail-rich entry 1", "Detail-rich entry 2", "Detail-rich entry 3", "Detail-rich entry 4", "Detail-rich entry 5"],
+    "homeRemedies": ["Step-by-step remedy 1", "Step-by-step remedy 2", "Step-by-step remedy 3", "Step-by-step remedy 4", "Step-by-step remedy 5", "Step-by-step remedy 6"]
   },
-  "summaryText": "Brief clinical reasoning connecting symptoms to predictions."
+  "summaryText": "Brief clinical reasoning in plain, non-bolded English connecting symptoms to predictions."
 }
-FINAL CHECK BEFORE RESPONDING:
-- probabilityMatrix MUST have exactly 5 items.
-- allopathy MUST have at least 4 items.
-- homeopathic MUST have at least 3 items.
-- homeRemedies MUST have at least 4 items.
-- Every homeRemedies item must be UNIQUE and SPECIFIC to the diagnosed conditions.
-If any array has fewer items than required, ADD MORE before responding.`;
+FINAL CHECK: Ensure NO bolding (**) in any field. Use analogies. Return JSON only.`;
 
     const promptText = `Selected UI Symptoms: ${activeSymptoms.join(', ')}. NLP Text: ${customSymptom}`;
 
@@ -84,8 +91,7 @@ If any array has fewer items than required, ADD MORE before responding.`;
     // 5. JSON Extraction & Cleaning 
     let parsedResponse;
     try {
-      // Robust JSON Extraction for Cloud Models (Groq/Qwen)
-      // Strip DeepSeek <think> tags if present
+      // Strip reasoning tags if present
       let cleaned = rawAiResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       
       // Find the first '{' and the last '}' to isolate the JSON object
@@ -100,8 +106,8 @@ If any array has fewer items than required, ADD MORE before responding.`;
       parsedResponse = JSON.parse(jsonStr);
       console.log('[SymptomController] Successfully parsed neural response.');
     } catch (parseErr) {
-      console.error('LLM Syntax Parsing Failure:', parseErr);
-      console.error('Raw Response context:', rawAiResponse.substring(0, 200));
+      console.error('[SymptomController] JSON Parsing Failure:', parseErr);
+      console.error('[SymptomController] Raw Response (first 500 chars):', rawAiResponse.substring(0, 500));
       // Graceful fallback - return a basic response instead of crashing
       parsedResponse = {
         probabilityMatrix: [

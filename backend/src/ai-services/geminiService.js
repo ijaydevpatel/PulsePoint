@@ -90,7 +90,6 @@ export const callGeminiVision = async (fileBuffer, mimeType, basePrompt = "", te
 
 /**
  * High-Reliability Text-Only Diagnostic Pipeline
- * Used as cloud fallback when local Ollama models are unavailable.
  * 
  * @param {string} prompt - User clinical input
  * @param {string} systemInstruction - Clinical constraints and JSON schema

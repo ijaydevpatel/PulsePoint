@@ -1,87 +1,36 @@
-import { callOllama, callOllamaStream } from '../ai-services/ollamaService.js';
 import { callGeminiText } from '../ai-services/geminiService.js';
 import { callGroq, callGroqStream } from '../ai-services/groqService.js';
-export { callOllamaStream, callGroqStream };
 import dotenv from 'dotenv';
+
 dotenv.config();
+
+export { callGroqStream };
 
 /**
  * Deterministic AI Routing Orchestrator.
  * 
- * Model Strategy:
- *   - Clinical tools (Symptoms, Medicine, Chat): GROQ (Qwen2.5/Qwen3) -> LLAMA (Local Fallback)
+ * STRICT ARCHITECTURE:
+ *   - Clinical tools (Symptoms, Medicine, Chat): GROQ (Qwen 3-32B)
  *   - Chat Streaming: GROQ Stream
  *   - Report/Document Analyzer: Gemini Vision (Multimodal)
  */
 export const executeModelChain = async (taskType, prompt, systemInstruction) => {
-  // Use Qwen-2.5-32b-distill (aliased as Qwen3 by user) for maximum reasoning/speed balance
-  const primaryModel = 'qwen-2.5-32b-distill';
+  // Use Qwen 3-32B (Groq Model ID: qwen/qwen3-32b)
+  const primaryModel = 'qwen/qwen3-32b';
+
+  console.log(`[Orchestrator] Task: ${taskType} | Engine: ${taskType === 'REPORT_ANALYSIS' ? 'Gemini' : 'Groq'}`);
 
   switch (taskType) {
-
-    case 'SYMPTOMS':
-      try {
-        console.log(`[Orchestrator] SYMPTOMS | Primary: Groq (${primaryModel})`);
-        return await callGroq(prompt, systemInstruction, primaryModel);
-      } catch (e) {
-        console.warn(`[Orchestrator] Groq failed (${e.message}). Falling back to Local Qwen/DeepSeek...`);
-        try {
-          return await callOllama(prompt, systemInstruction, process.env.OLLAMA_PRIMARY_MODEL);
-        } catch (ollamaErr) {
-          return await callOllama(prompt, systemInstruction, process.env.OLLAMA_CHAT_MODEL);
-        }
-      }
-
-    case 'MEDICINE_EXPLANATION':
-      try {
-        console.log(`[Orchestrator] MEDICINE | Primary: Groq (${primaryModel})`);
-        return await callGroq(prompt, systemInstruction, primaryModel);
-      } catch (e) {
-        console.warn(`[Orchestrator] Groq failed (${e.message}). Falling back to local...`);
-        try {
-          return await callOllama(prompt, systemInstruction, process.env.OLLAMA_PRIMARY_MODEL);
-        } catch (ollamaErr) {
-          return await callOllama(prompt, systemInstruction, process.env.OLLAMA_CHAT_MODEL);
-        }
-      }
-
-    case 'AI_DOCTOR':
-      try {
-        console.log(`[Orchestrator] AI_DOCTOR | Primary: Groq (${primaryModel})`);
-        return await callGroq(prompt, systemInstruction, primaryModel);
-      } catch (e) {
-        console.warn(`[Orchestrator] Groq failed (${e.message}). Falling back to local...`);
-        try {
-          return await callOllama(prompt, systemInstruction, process.env.OLLAMA_PRIMARY_MODEL);
-        } catch (ollamaErr) {
-          return await callOllama(prompt, systemInstruction, process.env.OLLAMA_CHAT_MODEL);
-        }
-      }
-
-    case 'DASHBOARD_INSIGHTS':
-      try {
-        return await callGroq(prompt, systemInstruction, primaryModel);
-      } catch (e) {
-        return await callOllama(prompt, systemInstruction, process.env.OLLAMA_PRIMARY_MODEL);
-      }
-
-    case 'MEDICAL_ANALYSIS':
-      try {
-        return await callGroq(prompt, systemInstruction, primaryModel);
-      } catch (e) {
-        return await callOllama(prompt, systemInstruction, process.env.OLLAMA_PRIMARY_MODEL);
-      }
-
     case 'REPORT_ANALYSIS':
-      // Gemini ONLY for the document/report analyzer tab
-      console.log('[Orchestrator] REPORT_ANALYSIS | Gemini Vision');
       return await callGeminiText(prompt, systemInstruction);
 
     default:
+      // All other tasks (SYMPTOMS, MEDICINE, AI_DOCTOR, etc.) use Groq (Qwen)
       try {
         return await callGroq(prompt, systemInstruction, primaryModel);
       } catch (e) {
-        return await callOllama(prompt, systemInstruction, process.env.OLLAMA_PRIMARY_MODEL);
+        console.error(`[Orchestrator] Neural Engine Error: ${e.message}`);
+        throw e; // No fallbacks allowed per user instruction
       }
   }
 };
