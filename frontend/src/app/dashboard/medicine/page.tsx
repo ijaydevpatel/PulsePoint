@@ -13,16 +13,13 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
     "#ef4444"; // Crimson (Danger)
 
   // Calculate Knob position based on 180 degree arc
-  // Radius = 110, Center = (150, 140)
   const radius = 110;
   const cx = 150;
   const cy = 140;
-  // Theta stretches from PI (left, 0%) to 0 (right, 100%)
   const theta = Math.PI - (percentage / 100) * Math.PI;
   const knobX = cx + radius * Math.cos(theta);
   const knobY = cy - radius * Math.sin(theta);
 
-  // DashArray for progress fill
   const circumference = Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
@@ -36,7 +33,6 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
           </filter>
         </defs>
 
-        {/* Thick Background Track */}
         <path 
           d={`M ${cx - radius},${cy} A ${radius} ${radius} 0 0 1 ${cx + radius},${cy}`} 
           fill="none" 
@@ -45,7 +41,6 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
           strokeLinecap="round" 
         />
 
-        {/* Progress Fill (1.5px less thickness) */}
         <motion.path 
           d={`M ${cx - radius},${cy} A ${radius} ${radius} 0 0 1 ${cx + radius},${cy}`} 
           fill="none" 
@@ -58,7 +53,6 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
           transition={{ duration: 1.5, ease: "easeOut" }}
         />
 
-        {/* Indicator Knob Ring */}
         <motion.circle 
           initial={{ cx: cx - radius, cy: cy }}
           animate={{ cx: knobX, cy: knobY }}
@@ -70,7 +64,6 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
           filter="url(#knobGlow)"
         />
         
-        {/* Subtle inner core of knob */}
         <motion.circle 
           initial={{ cx: cx - radius, cy: cy }}
           animate={{ cx: knobX, cy: knobY }}
@@ -80,7 +73,6 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
         />
       </svg>
       
-      {/* Centered Typography exactly filling the hollow arc */}
       <div className="absolute inset-x-0 bottom-6 flex flex-col items-center justify-center pointer-events-none">
         <motion.span 
           initial={{ scale: 0.8, opacity: 0 }}
@@ -107,7 +99,6 @@ const MEDICINE_PHASES = [
   "Generating risk profile...",
 ];
 
-// Helper to convert LLM hallucinated objects into clean human-readable text
 const safeFormatItem = (item: any): string => {
   if (typeof item === 'string') return item;
   if (item && typeof item === 'object') {
@@ -115,7 +106,6 @@ const safeFormatItem = (item: any): string => {
     if (item.description) return item.description;
     if (item.text) return item.text;
     if (item.step) return item.step;
-    // Special case for the {step1, description} hallucination
     const keys = Object.keys(item);
     if (keys.length > 0 && typeof item[keys[0]] === 'string') {
       return Object.values(item).filter(v => typeof v === 'string').join(": ");
@@ -150,7 +140,6 @@ export default function MedicinePage() {
         primaryMedicine: med1,
         secondaryMedicine: med2
       });
-      // Mocking percentage if not provided by backend for the gauge
       const riskMap: Record<string, number> = { "Low": 15, "Moderate": 45, "High": 82, "Critical": 100 };
       setResultData({
         ...data,
@@ -174,13 +163,11 @@ export default function MedicinePage() {
 
       <div className="flex-1 w-full flex flex-col lg:flex-row gap-6 z-20 overflow-y-auto hide-scrollbar">
         
-        {/* Input Phase Layout */}
         <div className="flex-1 flex flex-col gap-6">
            <div className="bg-surface-glass backdrop-blur-3xl border border-border-glass shadow-sm rounded-[32px] p-6 flex flex-col min-h-[400px]">
               <h3 className="text-lg font-bold text-text-primary mb-6 flex items-center gap-2"><GitCompare size={18} className="text-primary"/> Define Agents</h3>
               
               <div className="flex flex-col gap-3 flex-1 lg:mt-6">
-                 
                  <div className="relative z-10 flex flex-col bg-surface-low px-5 py-4 rounded-2xl border border-surface-container shadow-sm">
                     <label className="text-xs font-black uppercase text-text-primary tracking-widest mb-2 block">Primary Medicine</label>
                     <input 
@@ -223,7 +210,6 @@ export default function MedicinePage() {
            </button>
         </div>
 
-        {/* Dynamic Risk Overlay Phase */}
         <div className="flex-1 flex flex-col h-full min-h-[500px]">
           <AnimatePresence mode="wait">
             {error ? (
@@ -257,87 +243,167 @@ export default function MedicinePage() {
 
                  <div className="flex flex-col gap-6">
 
-                      {/* Active Ingredient Causing Risk */}
-                     {resultData?.interactionCause && (
-                       <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-6 shadow-sm shadow-amber-500/5">
-                         <div className="flex items-center gap-3 mb-4">
-                            <div className="bg-amber-500/20 p-2 rounded-xl">
-                              <AlertTriangle size={20} className="text-amber-400"/>
-                            </div>
+                      {resultData?.interactionCause && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-6 shadow-sm shadow-amber-500/5">
+                          <div className="flex items-center gap-3 mb-4">
+                             <div className="bg-amber-500/20 p-2 rounded-xl">
+                               <AlertTriangle size={20} className="text-amber-400"/>
+                             </div>
+                             <div>
+                               <h4 className="font-bold text-amber-400 text-base leading-tight">Critical Risk Analysis</h4>
+                               <p className="text-amber-400/60 text-xs font-medium uppercase tracking-widest mt-0.5">Primary Risk Ingredients</p>
+                             </div>
+                          </div>
+                          <div className="text-sm text-text-secondary leading-relaxed font-medium bg-black/20 p-4 rounded-2xl border border-white/5">
+                            {typeof resultData.interactionCause === 'string' ? resultData.interactionCause : safeFormatItem(resultData.interactionCause)}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-2">
+                        <h4 className="font-bold text-text-primary mb-2 text-sm uppercase tracking-wider">Metabolic Reaction Profile</h4>
+                        <div className="text-sm text-text-secondary leading-relaxed bg-surface-low p-4 rounded-xl border border-surface-container">
+                          {typeof resultData?.explanation === 'string' ? (
+                            <p>{resultData.explanation}</p>
+                          ) : Array.isArray(resultData?.explanation) ? (
+                            <ul className="list-decimal pl-4 space-y-2">
+                              {resultData.explanation.map((step: any, idx: number) => (
+                                <li key={idx} className="marker:text-primary/50">
+                                  {safeFormatItem(step)}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>{resultData?.explanation ? safeFormatItem(resultData.explanation) : "Awaiting neural explanation."}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-surface-low border border-surface-container rounded-2xl p-5 shadow-sm">
+                          <h5 className="text-[10px] uppercase font-black tracking-widest text-text-secondary mb-4 flex items-center gap-2">
+                             <div className="w-1 h-3 bg-primary rounded-full" />
+                             Technical Analysis: {med1}
+                          </h5>
+                          
+                          <div className="space-y-4">
                             <div>
-                              <h4 className="font-bold text-amber-400 text-base leading-tight">Critical Risk Analysis</h4>
-                              <p className="text-amber-400/60 text-xs font-medium uppercase tracking-widest mt-0.5">Primary Risk Ingredients</p>
+                              <p className="text-[11px] font-black text-primary uppercase tracking-tight mb-1">Active Ingredient</p>
+                              <p className="text-xs text-text-primary leading-relaxed font-semibold">
+                                {resultData?.techIngredients1?.active || "Generic APIs detected as primary components."}
+                              </p>
                             </div>
-                         </div>
-                         <div className="text-sm text-text-secondary leading-relaxed font-medium bg-black/20 p-4 rounded-2xl border border-white/5">
-                           {typeof resultData.interactionCause === 'string' ? resultData.interactionCause : safeFormatItem(resultData.interactionCause)}
-                         </div>
-                       </div>
-                     )}
-
-                     <div className="mt-2">
-                       <h4 className="font-bold text-text-primary mb-2 text-sm uppercase tracking-wider">Metabolic Reaction Profile</h4>
-                       <div className="text-sm text-text-secondary leading-relaxed bg-surface-low p-4 rounded-xl border border-surface-container">
-                         {typeof resultData?.explanation === 'string' ? (
-                           <p>{resultData.explanation}</p>
-                         ) : Array.isArray(resultData?.explanation) ? (
-                           <ul className="list-decimal pl-4 space-y-2">
-                             {resultData.explanation.map((step: any, idx: number) => (
-                               <li key={idx} className="marker:text-primary/50">
-                                 {safeFormatItem(step)}
-                               </li>
-                             ))}
-                           </ul>
-                         ) : (
-                           <p>{resultData?.explanation ? safeFormatItem(resultData.explanation) : "Awaiting neural explanation."}</p>
-                         )}
-                       </div>
-                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="bg-surface-low border border-surface-container rounded-2xl p-4 shadow-sm">
-                         <h5 className="text-[10px] uppercase font-black tracking-widest text-text-secondary mb-2">Primary Components</h5>
-                          <span className="text-sm font-bold block mb-2">{med1}</span>
-                           <div className="flex flex-wrap gap-1.5">
-                             {Array.isArray(resultData?.ingredients1) ? (
-                               resultData.ingredients1.map((ing: any, i: number) => (
-                                 <span key={i} className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded-full font-bold border border-primary/20">
-                                   {safeFormatItem(ing)}
-                                 </span>
-                               ))
-                             ) : (
-                               <span className="text-xs text-text-secondary italic">Details unavailable</span>
-                             )}
-                           </div>
+                            
+                            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-surface-container/50">
+                               <div>
+                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Fillers/Binders</p>
+                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
+                                   {resultData?.techIngredients1?.inactive?.binders || "Typical pharmaceutical excipients."}
+                                 </p>
+                               </div>
+                               <div>
+                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Coatings/Glazing</p>
+                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
+                                   {resultData?.techIngredients1?.inactive?.coatings || "Standard protective shielding."}
+                                 </p>
+                               </div>
+                               <div>
+                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Additives/Colorants</p>
+                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
+                                   {resultData?.techIngredients1?.inactive?.additives || "Trace essential additives."}
+                                 </p>
+                               </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-surface-low border border-surface-container rounded-2xl p-4 shadow-sm">
-                          <h5 className="text-[10px] uppercase font-black tracking-widest text-text-secondary mb-2">Secondary Components</h5>
-                          <span className="text-sm font-bold block mb-2">{med2}</span>
-                           <div className="flex flex-wrap gap-1.5">
-                             {Array.isArray(resultData?.ingredients2) ? (
-                               resultData.ingredients2.map((ing: any, i: number) => (
-                                 <span key={i} className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded-full font-bold border border-primary/20">
-                                   {safeFormatItem(ing)}
-                                 </span>
-                               ))
-                             ) : (
-                               <span className="text-xs text-text-secondary italic">Details unavailable</span>
-                             )}
-                           </div>
-                        </div>
-                    </div>
 
-                     <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4">
-                        <h4 className="flex items-center gap-2 font-bold text-blue-400 text-sm mb-2"><CheckCircle2 size={16}/> Safer Alternatives & Warnings</h4>
-                        <ul className="text-sm font-medium text-text-secondary list-disc pl-4 flex flex-col gap-2">
+                        <div className="bg-surface-low border border-surface-container rounded-2xl p-5 shadow-sm">
+                          <h5 className="text-[10px] uppercase font-black tracking-widest text-text-secondary mb-4 flex items-center gap-2">
+                             <div className="w-1 h-3 bg-primary rounded-full" />
+                             Technical Analysis: {med2}
+                          </h5>
+                          
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-[11px] font-black text-primary uppercase tracking-tight mb-1">Active Ingredient</p>
+                              <p className="text-xs text-text-primary leading-relaxed font-semibold">
+                                {resultData?.techIngredients2?.active || "Generic APIs detected as primary components."}
+                              </p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-surface-container/50">
+                               <div>
+                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Fillers/Binders</p>
+                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
+                                   {resultData?.techIngredients2?.inactive?.binders || "Typical pharmaceutical excipients."}
+                                 </p>
+                               </div>
+                               <div>
+                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Coatings/Glazing</p>
+                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
+                                   {resultData?.techIngredients2?.inactive?.coatings || "Standard protective shielding."}
+                                 </p>
+                               </div>
+                               <div>
+                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Additives/Colorants</p>
+                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
+                                   {resultData?.techIngredients2?.inactive?.additives || "Trace essential additives."}
+                                 </p>
+                               </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 shadow-sm shadow-blue-500/5 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                           <Activity size={120} className="text-blue-400" />
+                        </div>
+                        <h4 className="flex items-center gap-2 font-bold text-blue-400 text-sm mb-4 relative z-10"><CheckCircle2 size={16}/> Clinical Deep-Dive & Advice</h4>
+                        
+                        <div className="flex flex-col gap-5 relative z-10">
+                          {resultData?.metabolicPathway && (
+                            <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                              <span className="text-[10px] font-black text-blue-400/60 block mb-1.5 uppercase tracking-widest">Metabolic Logistics</span>
+                              <p className="text-xs text-text-secondary leading-relaxed font-medium">{resultData.metabolicPathway}</p>
+                            </div>
+                          )}
+                          
+                          {resultData?.clinicalSeverityNote && (
+                            <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                              <span className="text-[10px] font-black text-blue-400/60 block mb-1.5 uppercase tracking-widest">Clinical Logic</span>
+                              <p className="text-xs text-text-secondary leading-relaxed font-medium">{resultData.clinicalSeverityNote}</p>
+                            </div>
+                          )}
+                          
+                          {resultData?.patientAdvice && (
+                            <div className="p-4 bg-primary/15 border border-primary/30 rounded-2xl shadow-inner shadow-primary/5">
+                              <p className="text-xs font-black text-primary flex items-start gap-2">
+                                <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-md mt-0.5 shadow-sm">ACTION</span>
+                                {resultData.patientAdvice}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-surface-low border border-surface-container rounded-2xl p-6 shadow-sm">
+                        <h4 className="flex items-center gap-2 font-bold text-text-primary text-sm mb-4 uppercase tracking-widest"><div className="w-1.5 h-4 bg-primary rounded-full" /> Safer Alternatives & Warnings</h4>
+                        <ul className="text-sm font-medium text-text-secondary list-none flex flex-col gap-3">
                            {(Array.isArray(resultData?.safeAlternatives) ? resultData.safeAlternatives : []).map((alt: any, i: number) => (
-                             <li key={`alt-${i}`}><strong className="text-text-primary">Alt:</strong> {safeFormatItem(alt)}</li>
+                             <li key={`alt-${i}`} className="flex items-start gap-3 bg-surface-container/30 p-3 rounded-xl border border-surface-container">
+                               <CheckCircle2 size={14} className="text-green-500 mt-0.5 shrink-0" />
+                               <span className="text-xs leading-relaxed">{safeFormatItem(alt)}</span>
+                             </li>
                            ))}
                            {(Array.isArray(resultData?.warnings) ? resultData.warnings : []).map((warn: any, i: number) => (
-                             <li key={`warn-${i}`} className="text-rose-400"><strong>Warning:</strong> {safeFormatItem(warn)}</li>
+                             <li key={`warn-${i}`} className="flex items-start gap-3 bg-rose-500/5 p-3 rounded-xl border border-rose-500/20">
+                               <AlertTriangle size={14} className="text-rose-500 mt-0.5 shrink-0" />
+                               <span className="text-xs leading-relaxed text-rose-300 font-bold">{safeFormatItem(warn)}</span>
+                             </li>
                            ))}
                         </ul>
-                     </div>
+                      </div>
                  </div>
 
               </motion.div>

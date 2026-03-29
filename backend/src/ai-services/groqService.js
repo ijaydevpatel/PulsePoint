@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
  * Groq LPU Inference Service
  * High-speed cloud alternative for local Ollama models.
  */
-export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwen3-32b') => {
+export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwen3-32b', temperature = 0.2) => {
   try {
     if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'gsk_placeholder') {
       throw new Error('Groq API Key missing or invalid in .env');
@@ -28,7 +28,7 @@ export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwe
           ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
           { role: 'user', content: prompt }
         ],
-        temperature: 0.2,
+        temperature: temperature,
         max_tokens: 2048
       })
     });

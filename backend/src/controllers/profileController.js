@@ -11,7 +11,8 @@ export const getProfile = async (req, res) => {
     if (profile) {
       res.json(profile);
     } else {
-      res.status(404).json({ message: 'Profile Context Not Found' });
+      // Return 200 with null instead of 404 to avoid frontend network fault markers
+      res.json(null);
     }
   } catch (error) {
     res.status(500).json({ message: 'Profile Extraction Fault', error: error.message });

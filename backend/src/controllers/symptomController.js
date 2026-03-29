@@ -6,10 +6,10 @@ import Profile from '../models/Profile.js';
 // @access  Private
 export const analyzeSymptoms = async (req, res) => {
   try {
-    const { activeSymptoms, customSymptom } = req.body;
+    const { activeSymptoms = [], customSymptom = "" } = req.body;
     console.log(`[DiagnosticEngine] Symptom Analysis Request Received for: ${activeSymptoms?.length || 0} markers`);
 
-    if (!activeSymptoms.length && !customSymptom) {
+    if (!activeSymptoms?.length && !customSymptom) {
       return res.status(400).json({ message: 'Payload Execution Fault: No Symptom Tokens Received' });
     }
 

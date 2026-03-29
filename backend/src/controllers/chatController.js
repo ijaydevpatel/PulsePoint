@@ -11,8 +11,13 @@ export const sendMessage = async (req, res) => {
     if (!message) return res.status(400).json({ message: 'Message Payload Empty' });
     if (!req.user?._id) return res.status(401).json({ message: 'Unauthorized session.' });
 
-    const profile = await Profile.findOne({ user: req.user._id });
-    if (!profile) return res.status(404).json({ message: 'Profile Linkage Error.' });
+    let profile = await Profile.findOne({ user: req.user._id });
+    
+    // Resilient Fallback: Ensure chat doesn't fail even if profile linkage is pending
+    if (!profile) {
+      console.warn(`[ChatEngine] Profile missing for user ${req.user._id}. Using Guest Baseline.`);
+      profile = { fullName: 'User', age: 30, gender: 'Not Specified' };
+    }
 
     let session;
     if (sessionId) {
@@ -67,7 +72,12 @@ export const streamMessage = async (req, res) => {
     if (!message) return res.status(400).json({ message: 'Message Payload Empty' });
     if (!req.user?._id) return res.status(401).json({ message: 'Unauthorized session.' });
 
-    const profile = await Profile.findOne({ user: req.user._id });
+    let profile = await Profile.findOne({ user: req.user._id });
+    if (!profile) {
+       console.warn(`[ChatEngine] Profile missing for user ${req.user._id} during stream. Using Guest Baseline.`);
+       profile = { fullName: 'User' };
+    }
+
     let session = sessionId ? await ChatSession.findById(sessionId) : null;
     
     if (!session) {

@@ -14,20 +14,21 @@ export { callGroqStream };
  *   - Chat Streaming: GROQ Stream
  *   - Report/Document Analyzer: Gemini Vision (Multimodal)
  */
-export const executeModelChain = async (taskType, prompt, systemInstruction) => {
-  // Use Qwen 3-32B (Groq Model ID: qwen/qwen3-32b)
-  const primaryModel = 'qwen/qwen3-32b';
+export const executeModelChain = async (taskType, prompt, systemInstruction, options = {}) => {
+  // Default to Qwen 3-32B or use specifically requested model (e.g. Llama 70B for high-fidelity extraction)
+  const primaryModel = options.model || 'qwen/qwen3-32b';
+  const temperature = options.temperature || 0.2;
 
-  console.log(`[Orchestrator] Task: ${taskType} | Engine: ${taskType === 'REPORT_ANALYSIS' ? 'Gemini' : 'Groq'}`);
+  console.log(`[Orchestrator] Task: ${taskType} | Engine: Groq | Model: ${primaryModel} | Temp: ${temperature}`);
 
   switch (taskType) {
     case 'REPORT_ANALYSIS':
       return await callGeminiText(prompt, systemInstruction);
 
     default:
-      // All other tasks (SYMPTOMS, MEDICINE, AI_DOCTOR, etc.) use Groq (Qwen)
+      // All other tasks use Groq
       try {
-        return await callGroq(prompt, systemInstruction, primaryModel);
+        return await callGroq(prompt, systemInstruction, primaryModel, temperature);
       } catch (e) {
         console.error(`[Orchestrator] Neural Engine Error: ${e.message}`);
         throw e; // No fallbacks allowed per user instruction
