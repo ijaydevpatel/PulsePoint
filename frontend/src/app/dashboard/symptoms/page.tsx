@@ -166,11 +166,6 @@ export default function SymptomsPage() {
                        <p className="text-xs font-bold text-text-primary">Based on provided markers & profile</p>
                      </div>
                    </div>
-                   {resultData?.isEmergencyOverride && (
-                     <div className="px-3 py-1 bg-red-600 rounded-lg text-white shadow-sm text-center animate-pulse">
-                       <span className="block text-xs uppercase font-black">CRITICAL</span>
-                     </div>
-                   )}
                  </div>
 
                  {/* Results List */}

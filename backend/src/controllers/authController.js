@@ -45,6 +45,12 @@ export const registerUser = async (req, res) => {
     });
 
     if (user) {
+      // Identity Handshake: Ensure Profile exists immediately
+      await (await import('../models/Profile.js')).default.create({
+        user: user._id,
+        emergencyContact: { name: "", phone: "", relation: "" }
+      });
+
       const token = generateToken(res, user._id);
       
       res.status(201).json({

@@ -9,33 +9,37 @@ const profileSchema = new mongoose.Schema({
   },
   fullName: {
     type: String,
-    required: true,
+    required: false,
+    default: "Active User"
   },
   age: {
     type: Number,
-    required: true,
+    required: false,
+    default: 0
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female', 'Other', 'Prefer not to say'],
-    required: true,
+    enum: ['Male', 'Female', 'Other', 'Prefer not to say', 'Unknown'],
+    required: false,
+    default: 'Unknown'
   },
   height: { // in cm
     type: Number,
-    required: true,
+    required: false,
   },
   weight: { // in kg
     type: Number,
-    required: true,
+    required: false,
   },
   bmi: {
     type: Number,
-    required: true,
+    required: false,
   },
   bloodGroup: {
     type: String,
-    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-    required: true,
+    enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Unknown'],
+    required: false,
+    default: 'Unknown'
   },
   allergies: [{
     type: String,
@@ -49,6 +53,7 @@ const profileSchema = new mongoose.Schema({
   emergencyContact: {
     name: String,
     phone: String,
+    email: String,
     relation: String,
   },
   location: {

@@ -17,7 +17,9 @@ import {
   Activity,
   Download,
   Trash2,
-  RefreshCw
+  RefreshCw,
+  Palette,
+  Languages
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { apiClient } from "@/lib/api";
@@ -88,7 +90,6 @@ export default function SettingsPage() {
     if (confirm("CRITICAL: This will permanently erase your local neural cache and disconnect your session. Proceed?")) {
       setIsSaving(true);
       try {
-        // Here we could call a backend delete if exists: await apiClient.delete('/profile');
         logout();
       } catch (err) {
         console.error("Purge failed:", err);
@@ -114,7 +115,6 @@ export default function SettingsPage() {
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="w-full h-full flex flex-col pt-4 px-6 pb-12 overflow-y-auto hide-scrollbar">
       
-      {/* Header logic */}
       <AnimatePresence mode="wait">
         {!activeTab ? (
           <motion.div key="main-header" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex flex-col mb-8 mt-2 relative z-20">
@@ -140,7 +140,6 @@ export default function SettingsPage() {
       <div className="relative z-20">
         <AnimatePresence mode="wait">
           {!activeTab ? (
-            /* Grid View */
             <motion.div key="grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                <div onClick={() => setActiveTab("Account & Profile")} className="bg-surface-glass backdrop-blur-3xl p-6 rounded-[32px] border border-border-glass shadow-sm flex flex-col cursor-pointer hover:bg-surface-low hover:shadow-float transition-all group">
                   <div className="w-12 h-12 bg-primary/10 text-primary flex items-center justify-center rounded-2xl mb-4 group-hover:scale-110 transition-transform">
@@ -148,6 +147,14 @@ export default function SettingsPage() {
                   </div>
                   <h3 className="text-lg font-bold text-text-primary mb-1">Account & Profile</h3>
                   <p className="text-xs text-text-secondary leading-relaxed">Update basic information, bio-metrics, and global platform identities.</p>
+               </div>
+
+               <div onClick={() => setActiveTab("General")} className="bg-surface-glass backdrop-blur-3xl p-6 rounded-[32px] border border-border-glass shadow-sm flex flex-col cursor-pointer hover:bg-surface-low hover:shadow-float transition-all group">
+                  <div className="w-12 h-12 bg-amber-500/10 text-amber-500 flex items-center justify-center rounded-2xl mb-4 group-hover:scale-110 transition-transform">
+                    <SettingsIcon size={24} />
+                  </div>
+                  <h3 className="text-lg font-bold text-text-primary mb-1">General</h3>
+                  <p className="text-xs text-text-secondary leading-relaxed">Customize theme, language, and global application behavior.</p>
                </div>
                
                <div onClick={() => setActiveTab("Notifications")} className="bg-surface-glass backdrop-blur-3xl p-6 rounded-[32px] border border-border-glass shadow-sm flex flex-col cursor-pointer hover:bg-surface-low hover:shadow-float transition-all group">
@@ -165,8 +172,8 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-bold text-text-primary mb-1">Privacy & Security</h3>
                   <p className="text-xs text-text-secondary leading-relaxed">Manage your HIPAA data sharing protocols and archive exports.</p>
                </div>
-
-               <div onClick={logout} className="bg-surface-glass/40 backdrop-blur-3xl p-6 rounded-[32px] border border-border-glass border-dashed shadow-sm flex flex-col cursor-pointer hover:bg-red-500/5 hover:border-red-500/20 transition-all group col-span-1 md:col-span-2 lg:col-span-1 mt-0">
+               
+               <div onClick={logout} className="bg-surface-glass/40 backdrop-blur-3xl p-6 rounded-[32px] border border-border-glass border-dashed shadow-sm flex flex-col cursor-pointer hover:bg-red-500/5 hover:border-red-500/20 transition-all group lg:mt-0">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-red-500/10 text-red-500 flex items-center justify-center rounded-2xl">
                       <LogOut size={24} />
@@ -179,7 +186,6 @@ export default function SettingsPage() {
                </div>
             </motion.div>
           ) : (
-            /* Detailed View */
             <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col gap-6 w-full max-w-4xl mx-auto pb-12">
                
                {activeTab === "Account & Profile" && (
@@ -201,10 +207,10 @@ export default function SettingsPage() {
                         const formData = new FormData(e.currentTarget);
                         const data = {
                           fullName: formData.get('fullName') as string,
-                          age: parseInt(formData.get('age') as string),
+                          age: parseInt(formData.get('age') as string) || 0,
                           gender: formData.get('gender') as string,
-                          height: parseFloat(formData.get('height') as string),
-                          weight: parseFloat(formData.get('weight') as string),
+                          height: parseFloat(formData.get('height') as string) || 0,
+                          weight: parseFloat(formData.get('weight') as string) || 0,
                           bloodGroup: formData.get('bloodGroup') as string,
                           allergies: (formData.get('allergies') as string).split(',').map(s => s.trim()).filter(Boolean),
                           conditions: (formData.get('conditions') as string).split(',').map(s => s.trim()).filter(Boolean),
@@ -253,37 +259,78 @@ export default function SettingsPage() {
                              </div>
                              <div className="flex flex-col gap-1.5">
                                 <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Blood</label>
-                                <select name="bloodGroup" defaultValue={profile?.bloodGroup} className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none">
-                                   {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"].map(grp => <option key={grp}>{grp}</option>)}
+                                <select name="bloodGroup" defaultValue={profile?.bloodGroup || "O+" } className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none">
+                                   {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(grp => <option key={grp}>{grp}</option>)}
                                 </select>
                              </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Allergies (Comma separated)</label>
+                              <input name="allergies" defaultValue={profile?.allergies?.join(', ')} placeholder="e.g. Peanuts, Penicillin" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Medical Conditions</label>
+                              <input name="conditions" defaultValue={profile?.conditions?.join(', ')} placeholder="e.g. Asthma, Hypertension" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Current Medications</label>
+                              <input name="medications" defaultValue={profile?.medications?.join(', ')} placeholder="e.g. Aspirin, Vitamin D" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
                           </div>
                        </div>
 
                        <div className="flex flex-col gap-4">
-                          <div className="flex flex-col gap-1.5">
-                             <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Allergies (Comma separated)</label>
-                             <input name="allergies" defaultValue={profile?.allergies?.join(', ')} placeholder="e.g. Peanuts, Penicillin" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                             <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Medical Conditions</label>
-                             <input name="conditions" defaultValue={profile?.conditions?.join(', ')} placeholder="e.g. Asthma, Hypertension" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                             <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Current Medications</label>
-                             <input name="medications" defaultValue={profile?.medications?.join(', ')} placeholder="e.g. Aspirin, Vitamin D" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
-                          </div>
-                          
                           <button 
                             type="submit" 
                             disabled={isSaving}
-                            className="mt-4 w-full py-4 bg-primary text-white rounded-2xl font-black shadow-md hover:bg-primary-hover hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="w-full py-4 bg-primary text-white rounded-2xl font-black shadow-md hover:bg-primary-hover hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                           >
                             {isSaving ? <Activity className="animate-spin" size={18} /> : <Save size={18} />}
                             Synchronize Bio-Metrics
                           </button>
                        </div>
                     </form>
+                 </div>
+               )}
+
+               {activeTab === "General" && (
+                 <div className="bg-surface-glass border border-border-glass rounded-[32px] p-6 flex flex-col gap-4">
+                    <div className="flex items-center justify-between p-4 bg-surface-low rounded-2xl border border-border-glass">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl"><Palette size={20}/></div>
+                          <div>
+                            <p className="font-bold text-text-primary">Interface Theme</p>
+                            <p className="text-xs text-text-secondary">Toggle between Neural Dark and Clinical Light</p>
+                          </div>
+                       </div>
+                       <select 
+                         value={settings?.theme}
+                         onChange={(e) => updateSetting('theme', e.target.value)}
+                         className="bg-surface-container border border-border-glass rounded-lg p-2 text-xs text-text-primary outline-none"
+                       >
+                         <option value="dark">Neural Dark</option>
+                         <option value="light">Clinical Light</option>
+                       </select>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-surface-low rounded-2xl border border-border-glass">
+                       <div className="flex items-center gap-4">
+                          <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl"><Languages size={20}/></div>
+                          <div>
+                            <p className="font-bold text-text-primary">System Language</p>
+                            <p className="text-xs text-text-secondary">Select your preferred clinical terminology locale</p>
+                          </div>
+                       </div>
+                       <select 
+                         value={settings?.language}
+                         onChange={(e) => updateSetting('language', e.target.value)}
+                         className="bg-surface-container border border-border-glass rounded-lg p-2 text-xs text-text-primary outline-none"
+                       >
+                         <option value="en">English (US)</option>
+                         <option value="es">Español</option>
+                         <option value="fr">Français</option>
+                       </select>
+                    </div>
                  </div>
                )}
 
@@ -320,10 +367,6 @@ export default function SettingsPage() {
                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings?.emailAlerts ? 'left-7' : 'left-1'}`} />
                        </button>
                     </div>
-
-                    <div className="p-4 bg-surface-low/50 rounded-2xl border border-border-glass italic text-xs text-text-secondary text-center">
-                      Experimental "Do Not Disturb" Scheduling coming in v1.4
-                    </div>
                  </div>
                )}
 
@@ -352,7 +395,6 @@ export default function SettingsPage() {
                        >
                           <Download size={28} className="text-primary group-hover:scale-110 transition-transform" />
                           <span className="text-sm font-black text-text-primary uppercase tracking-widest">Neural Archive</span>
-                          <span className="text-[10px] text-text-secondary font-bold">EXPORT JSON</span>
                        </button>
                        <button 
                          onClick={handlePurgeData}
@@ -360,19 +402,8 @@ export default function SettingsPage() {
                        >
                           <Trash2 size={28} className="text-red-500 group-hover:scale-110 transition-transform" />
                           <span className="text-sm font-black text-red-500 uppercase tracking-widest">Purge Node</span>
-                          <span className="text-[10px] text-text-secondary font-bold">PERMANENT ERASURE</span>
                        </button>
                     </div>
-
-                    <button 
-                      onClick={async () => {
-                         setIsSaving(true);
-                         setTimeout(() => setIsSaving(false), 1000); // UI feedback for mock regeneration
-                      }}
-                      className="w-full py-4 bg-surface-container hover:bg-surface-container-high text-text-primary rounded-2xl font-black text-sm transition-all border border-border-glass flex items-center justify-center gap-3"
-                    >
-                       <RefreshCw size={18} className={isSaving ? "animate-spin" : ""} /> Update Authentication Handshake
-                    </button>
                  </div>
                )}
 
@@ -388,5 +419,3 @@ export default function SettingsPage() {
     </motion.div>
   );
 }
-
-

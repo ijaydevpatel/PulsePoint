@@ -48,7 +48,7 @@ export default function ProfileSetupPage() {
     e.preventDefault();
     setLoading(true);
 
-    const profile: UserProfile = {
+    const profile: any = {
       fullName: formData.fullName,
       age: parseInt(formData.age) || 0,
       gender: formData.gender,
@@ -179,6 +179,7 @@ export default function ProfileSetupPage() {
                 </div>
              </div>
           </motion.div>
+
 
           <motion.div variants={itemVariants as any} whileHover={{ scale: loading ? 1 : 1.01 }} whileTap={{ scale: loading ? 1 : 0.99 }} className="mt-6">
             <button 

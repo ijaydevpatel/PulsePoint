@@ -25,7 +25,6 @@ const navItems = [
   { icon: MessageSquare, label: "AI Doctor", href: "/dashboard/chat" },
   { icon: Newspaper, label: "Health News", href: "/dashboard/news" },
   { icon: MapIcon, label: "Medical Map", href: "/dashboard/map" },
-  { icon: AlertTriangle, label: "Emergency", href: "/dashboard/emergency" },
 ];
 
 export function Sidebar() {
