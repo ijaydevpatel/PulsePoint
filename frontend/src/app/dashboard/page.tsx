@@ -50,6 +50,11 @@ export default function DashboardPage() {
     }
   }
 
+  // Digital Twin & Gamification Extracted Data
+  const healthScore = profile?.healthScore || 0;
+  const streak = profile?.streak || 0;
+  const latestInsights = profile?.healthInsights?.slice(-2).reverse() || [];
+
   return (
     <motion.div 
       variants={containerVariants}
@@ -142,21 +147,54 @@ export default function DashboardPage() {
              </div>
           </motion.div>
           
-          <motion.div 
-            variants={cardVariants}
-            className="flex-1 bg-primary/90 backdrop-blur-3xl rounded-[32px] p-8 shadow-md hover:shadow-float-heavy transition-all border border-primary/50 flex flex-col justify-center text-white relative overflow-hidden float-animation"
-          >
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-             <div className="relative z-10 flex items-center justify-between mb-2">
-               <h4 className="text-lg font-bold text-white">Clinical Score</h4>
-             </div>
-             <div className="relative z-10 mt-auto">
-               <span className="text-5xl font-black block mb-1">
-                  {profile?.bmi ? (100 - profile.bmi + ((profile.conditions?.length || 0) * -10)).toFixed(0) : "N/A"}
-               </span>
-               <span className="text-sm font-medium text-white/80">Calculated Health Index</span>
-             </div>
-          </motion.div>
+          {/* Digital Twin Insights */}
+          {latestInsights.length > 0 && (
+            <motion.div 
+              variants={cardVariants}
+              className="flex-1 bg-surface-glass backdrop-blur-3xl rounded-[32px] p-6 shadow-sm border border-border-glass flex flex-col justify-center overflow-hidden"
+            >
+              <h4 className="text-sm font-bold text-text-secondary uppercase tracking-tight mb-3">Twin Insights</h4>
+              <div className="flex flex-col gap-2">
+                {latestInsights.map((ins: any, i: number) => (
+                  <div key={i} className="flex items-center gap-3 p-2 bg-surface-low rounded-xl border border-surface-container-high">
+                    <div className={`w-2 h-2 rounded-full ${ins.type === 'Pattern' ? 'bg-primary' : 'bg-accent-orange'}`} />
+                    <span className="text-[11px] font-bold text-text-primary leading-tight">{ins.content}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          <div className="flex gap-4">
+            <motion.div 
+              variants={cardVariants}
+              className="flex-1 bg-primary/90 backdrop-blur-3xl rounded-[32px] p-6 shadow-md hover:shadow-float-heavy transition-all border border-primary/50 flex flex-col justify-center text-white relative overflow-hidden h-[180px]"
+            >
+               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+               <div className="relative z-10 flex items-center justify-between mb-2">
+                 <h4 className="text-sm font-bold text-white uppercase tracking-wider">Health Index</h4>
+               </div>
+               <div className="relative z-10 mt-auto">
+                 <span className="text-4xl font-black block mb-1">
+                    {healthScore || "N/A"}
+                 </span>
+                 <span className="text-[10px] font-medium text-white/80">Clinical Accuracy</span>
+               </div>
+            </motion.div>
+
+            <motion.div 
+              variants={cardVariants}
+              className="flex-1 bg-surface-glass backdrop-blur-3xl rounded-[32px] p-6 shadow-sm border border-border-glass flex flex-col justify-center relative overflow-hidden h-[180px]"
+            >
+               <h4 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Streak</h4>
+               <div className="mt-auto">
+                 <span className="text-4xl font-black block text-primary mb-1">
+                    {streak}d
+                 </span>
+                 <span className="text-[10px] font-bold text-text-secondary">Consecutive Access</span>
+               </div>
+            </motion.div>
+          </div>
         </div>
 
       </div>

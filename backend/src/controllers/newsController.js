@@ -1,6 +1,5 @@
 import Parser from 'rss-parser';
 import * as cheerio from 'cheerio';
-import Mailjet from 'node-mailjet';
 
 const parser = new Parser({
   customFields: {

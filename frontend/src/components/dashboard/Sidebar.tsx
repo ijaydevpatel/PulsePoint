@@ -41,7 +41,7 @@ export function Sidebar() {
       </Link>
 
       {/* Primary Nav Items Stack */}
-      <div className="flex-1 flex flex-col gap-3 w-full items-center pointer-events-auto">
+      <div className="flex-1 flex flex-col justify-center gap-3 w-full items-center pointer-events-auto relative">
         {navItems.map((item, index) => {
           const isActive = pathname === item.href;
           // Calculate a fixed Y offset for the tooltip based on index to prevent overflow clipping

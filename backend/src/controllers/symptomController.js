@@ -52,36 +52,43 @@ export const analyzeSymptoms = async (req, res) => {
     }
 
     // 3. Orchestrator Payload Construction
-    const currentMeds = profile.currentMedications?.join(', ') || 'None';
+    const currentMeds = profile.medications?.join(', ') || 'None';
     const systemInstruction = `You are a helpful health guide for non-medical users. Respond with JSON ONLY. No markdown, no bolding, no code fences.
     Explain medical terms with simple analogies (e.g., your immune system is like a shield, lungs are like bellows).
     DO NOT use markdown bolding (no ** text **). Keep all text plain and normal.
 
 PATIENT PROFILE:
 - Age: ${profile.age}, Gender: ${profile.gender}, BMI: ${profile.bmi}
-- Known Allergies: ${profile.allergies.join(', ') || 'None'}
+- Known Allergies: ${profile.allergies?.join(', ') || 'None'}
 - Current Medications: ${currentMeds}
 
 TASK: Analyze the provided symptoms and predict the top 5 most probable conditions. 
-IMPORTANT: Start with the MOST COMMON causes first (e.g., lack of sleep, dehydration, minor virus).
 
 CRITICAL RULES:
 - NEVER say "Consult a doctor" or "Seek professional help". You are a diagnostic aid.
-- For ALLOPATHY: List 6 EXACT over-the-counter or common names with dosage and a plain-English explanation of how it helps the heart/body/system.
-- For HOMEOPATHY: List 5 EXACT remedy names with potency and a simple analogy of its action.
-- For HOME REMEDIES: List 6 REAL, specific traditional remedies. For each, provide a 'How-to' step-by-step instruction involving real ingredients. DO NOT say "stay hydrated". Say something like "Steep 1 tsp of crushed ginger in hot water for 5 minutes to soothe the stomach lining like a warm blanket."
+- For ALLOPATHY: List 6 EXACT over-the-counter names with plain-English explanation.
+- For HOMEOPATHY: List 5 EXACT remedy names with simple analogy.
+- For HOME REMEDIES: List 6 REAL traditional remedies with step-by-step instructions.
+- HEALTH EDUCATION: For the top condition, provide "causes", "prevention", and "recovery" in short plain text.
+- ANALOGY ENGINE: Provide a "medicalAnalogy" for the top condition connecting it to a simple daily concept.
 
 JSON SCHEMA:
 {
   "probabilityMatrix": [{"name": "Disease Name", "confidence": 85, "severity": "High"}],
   "treatmentPathways": {
-    "allopathy": ["Detail-rich entry 1", "Detail-rich entry 2", "Detail-rich entry 3", "Detail-rich entry 4", "Detail-rich entry 5", "Detail-rich entry 6"],
-    "homeopathic": ["Detail-rich entry 1", "Detail-rich entry 2", "Detail-rich entry 3", "Detail-rich entry 4", "Detail-rich entry 5"],
-    "homeRemedies": ["Step-by-step remedy 1", "Step-by-step remedy 2", "Step-by-step remedy 3", "Step-by-step remedy 4", "Step-by-step remedy 5", "Step-by-step remedy 6"]
+    "allopathy": ["entry 1", "entry 2", "entry 3", "entry 4", "entry 5", "entry 6"],
+    "homeopathic": ["entry 1", "entry 2", "entry 3", "entry 4", "entry 5"],
+    "homeRemedies": ["remedy 1", "remedy 2", "remedy 3", "remedy 4", "remedy 5", "remedy 6"]
   },
-  "summaryText": "Brief clinical reasoning in plain, non-bolded English connecting symptoms to predictions."
+  "healthEducation": {
+    "causes": "Plain text reasons",
+    "prevention": "Plain text steps",
+    "recovery": "Plain text duration and care"
+  },
+  "medicalAnalogy": "Simple plain text analogy",
+  "summaryText": "Brief clinical reasoning in plain, non-bolded English."
 }
-FINAL CHECK: Ensure NO bolding (**) in any field. Use analogies. Return JSON only.`;
+FINAL CHECK: Ensure NO bolding (**) or markdown. Return JSON only.`;
 
     const promptText = `Selected UI Symptoms: ${activeSymptoms.join(', ')}. NLP Text: ${customSymptom}`;
 
@@ -135,6 +142,38 @@ FINAL CHECK: Ensure NO bolding (**) in any field. Use analogies. Return JSON onl
     };
 
     const sanitizedResponse = cleanObj(parsedResponse);
+
+    // 7. Digital Twin Pattern Detection & Logging (March 29 Extension)
+    try {
+      if (req.user && sanitizedResponse.probabilityMatrix?.length > 0) {
+        const topCondition = sanitizedResponse.probabilityMatrix[0];
+        const userProfile = await Profile.findOne({ user: req.user._id });
+        
+        if (userProfile) {
+          // Detect Patterns
+          const recentInsights = userProfile.healthInsights?.slice(-10) || [];
+          const isRecurring = recentInsights.some(ins => 
+            ins.content?.toLowerCase().includes(topCondition.name.toLowerCase())
+          );
+
+          const newInsight = {
+            type: isRecurring ? 'Pattern' : 'Risk',
+            content: `${isRecurring ? 'Recurring' : 'Detected'} trend for ${topCondition.name}.`,
+            severity: topCondition.severity,
+            date: new Date()
+          };
+
+          // Limit insights to last 50 to prevent document bloat
+          userProfile.healthInsights.push(newInsight);
+          if (userProfile.healthInsights.length > 50) userProfile.healthInsights.shift();
+          
+          await userProfile.save();
+          console.log(`[DigitalTwin] Insight logged: ${newInsight.type}`);
+        }
+      }
+    } catch (twinErr) {
+      console.error('[DigitalTwin] Logging Fault:', twinErr);
+    }
 
     res.json({
        ...sanitizedResponse,

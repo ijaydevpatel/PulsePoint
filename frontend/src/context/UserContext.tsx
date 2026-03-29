@@ -14,12 +14,13 @@ export interface UserProfile {
   conditions: string[];
   medications: string[];
   bloodGroup: string;
-  emergencyContact?: {
-    name: string;
-    phone: string;
-    email: string;
-    relation: string;
-  };
+  streak: number;
+  healthScore: number;
+  healthInsights: Array<{
+    type: string;
+    content: string;
+    timestamp: string;
+  }>;
 }
 
 interface UserContextType {
@@ -44,7 +45,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     allergies: Array.isArray(p.allergies) ? p.allergies : [],
     conditions: Array.isArray(p.conditions) ? p.conditions : [],
     medications: Array.isArray(p.medications) ? p.medications : [],
-    emergencyContact: p.emergencyContact || { name: "", phone: "", email: "", relation: "Family" }
+    streak: p.streak || 0,
+    healthScore: p.healthScore || 0,
+    healthInsights: Array.isArray(p.healthInsights) ? p.healthInsights : []
   });
 
   useEffect(() => {

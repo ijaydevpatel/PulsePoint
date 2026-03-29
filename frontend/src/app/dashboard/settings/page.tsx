@@ -201,6 +201,7 @@ export default function SettingsPage() {
                     </div>
                     
                     <form 
+                      id="profile-form"
                       onSubmit={async (e) => {
                         e.preventDefault();
                         setIsSaving(true);
@@ -264,7 +265,9 @@ export default function SettingsPage() {
                                 </select>
                              </div>
                           </div>
+                       </div>
 
+                       <div className="flex flex-col gap-4">
                           <div className="flex flex-col gap-1.5">
                               <label className="text-[10px] font-black uppercase text-text-secondary tracking-widest ml-1">Allergies (Comma separated)</label>
                               <input name="allergies" defaultValue={profile?.allergies?.join(', ')} placeholder="e.g. Peanuts, Penicillin" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
@@ -278,18 +281,19 @@ export default function SettingsPage() {
                               <input name="medications" defaultValue={profile?.medications?.join(', ')} placeholder="e.g. Aspirin, Vitamin D" className="bg-surface-low border border-border-glass rounded-xl p-3 text-sm text-text-primary focus:border-primary transition-all outline-none" />
                           </div>
                        </div>
-
-                       <div className="flex flex-col gap-4">
-                          <button 
-                            type="submit" 
-                            disabled={isSaving}
-                            className="w-full py-4 bg-primary text-white rounded-2xl font-black shadow-md hover:bg-primary-hover hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                          >
-                            {isSaving ? <Activity className="animate-spin" size={18} /> : <Save size={18} />}
-                            Synchronize Bio-Metrics
-                          </button>
-                       </div>
                     </form>
+
+                    <div className="mt-8 pt-6 border-t border-border-glass flex justify-center">
+                       <button 
+                         type="submit"
+                         form="profile-form"
+                         disabled={isSaving}
+                         className="w-full max-w-md py-4 bg-primary text-white rounded-2xl font-black shadow-md hover:bg-primary-hover hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                       >
+                         {isSaving ? <Activity className="animate-spin" size={18} /> : <Save size={18} />}
+                         Synchronize Bio-Metrics
+                       </button>
+                    </div>
                  </div>
                )}
 

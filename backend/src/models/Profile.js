@@ -58,7 +58,26 @@ const profileSchema = new mongoose.Schema({
   },
   location: {
     type: String,
-  }
+  },
+  // Ecosystem Extension (March 29)
+  streak: {
+    type: Number,
+    default: 0
+  },
+  lastCheckIn: {
+    type: Date,
+    default: Date.now
+  },
+  healthScore: {
+    type: Number,
+    default: 100
+  },
+  healthInsights: [{
+    type: { type: String }, // e.g., 'Risk', 'Pattern', 'Medicine'
+    content: String,
+    severity: String,
+    date: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true,
 });

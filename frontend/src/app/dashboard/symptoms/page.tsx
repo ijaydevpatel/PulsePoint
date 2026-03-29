@@ -226,6 +226,41 @@ export default function SymptomsPage() {
                     </div>
                  </div>
 
+                  {/* Health Education & Analogies (March 29 Extension) */}
+                  {resultData?.healthEducation && (
+                    <div className="mt-8 flex flex-col gap-4">
+                      <div className="bg-surface-glass border border-border-glass rounded-2xl p-6 backdrop-blur-md shadow-sm">
+                        <h3 className="font-bold text-lg text-text-primary mb-4 flex items-center gap-2">
+                          <ShieldCheck size={20} className="text-primary" />
+                          Biological Education
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div>
+                            <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest mb-1">Causes</h4>
+                            <p className="text-sm font-medium text-text-primary leading-relaxed">{resultData.healthEducation.causes}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest mb-1">Prevention</h4>
+                            <p className="text-sm font-medium text-text-primary leading-relaxed">{resultData.healthEducation.prevention}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[10px] font-black uppercase text-text-secondary tracking-widest mb-1">Recovery</h4>
+                            <p className="text-sm font-medium text-text-primary leading-relaxed">{resultData.healthEducation.recovery}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {resultData?.medicalAnalogy && (
+                        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 backdrop-blur-md">
+                          <h4 className="text-[10px] font-black uppercase text-primary tracking-widest mb-2">Medical Concept Analogy</h4>
+                          <p className="text-sm font-bold text-text-primary leading-relaxed italic">
+                            "{resultData.medicalAnalogy}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                  <div className="mt-8 p-3 bg-surface-glass border border-border-glass rounded-xl flex gap-3 text-text-secondary text-xs backdrop-blur-sm">
                     <ShieldCheck size={16} className="shrink-0 text-text-secondary/70" />
                     <p className="italic font-medium leading-relaxed">Disclaimer: This is predictive neural intelligence, not formal medical advice. If your fever exceeds 103°F (39.5°C), visit central infrastructure immediately.</p>
