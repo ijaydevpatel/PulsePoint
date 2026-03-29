@@ -3,6 +3,22 @@
 import React from "react";
 import { motion, Variants } from "framer-motion";
 import { useUser } from "@/context/UserContext";
+import { apiClient } from "@/lib/api";
+import Link from "next/link";
+import { 
+  Activity, 
+  AlertCircle, 
+  Brain, 
+  Wind, 
+  Sun, 
+  Droplets,
+  Gauge, 
+  ChevronRight, 
+  Flame, 
+  Stethoscope, 
+  Pill, 
+  UserCircle 
+} from "lucide-react";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -27,33 +43,95 @@ const cardVariants: Variants = {
 };
 
 export default function DashboardPage() {
-  const { profile } = useUser();
+  const { profile, saveProfile } = useUser();
+  const [loadingIntel, setLoadingIntel] = React.useState(false);
 
-  // Dynamic Adaptive Dashboard Logic placeholders
+  const hasFetchedIntel = React.useRef(false);
+
+  // Fetch Intelligence and OSINT data on mount
+  React.useEffect(() => {
+    const fetchIntelligence = async () => {
+      if (profile && !hasFetchedIntel.current) {
+        hasFetchedIntel.current = true;
+        setLoadingIntel(true);
+        try {
+          // Attempt Geolocation for OSINT (Native Browser Prompt)
+          if (navigator.geolocation) {
+             navigator.geolocation.getCurrentPosition(async (pos) => {
+               const lat = pos.coords.latitude;
+               const lon = pos.coords.longitude;
+               const data = await apiClient.get(`/dashboard/intel?lat=${lat}&lon=${lon}`);
+               if (data && data.intelligence) {
+                 saveProfile({
+                   ...profile,
+                   intelligence: data.intelligence,
+                   osint: data.osint
+                 });
+               }
+             }, async (error) => {
+               console.warn("Geolocation denied or failed:", error.message);
+               // Fallback without location
+               const data = await apiClient.get(`/dashboard/intel`);
+               if (data && data.intelligence) {
+                 saveProfile({ ...profile, intelligence: data.intelligence });
+               }
+             }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+          } else {
+             // Browser doesn't support geolocation
+             const data = await apiClient.get(`/dashboard/intel`);
+             if (data && data.intelligence) {
+               saveProfile({ ...profile, intelligence: data.intelligence });
+             }
+          }
+        } catch (error) {
+          console.error("Intelligence Load Error:", error);
+        } finally {
+          setLoadingIntel(false);
+        }
+      }
+    };
+    fetchIntelligence();
+  }, [profile, saveProfile]);
+
+  // Dynamic Adaptive Dashboard Logic
   let riskLevel = "Optimal";
   let riskColor = "text-primary bg-primary/10 border-primary/20";
-  let promptState = null;
+  let alertBar = null;
 
   if (profile) {
     if ((profile.bmi || 0) > 30 || (profile.conditions?.length || 0) > 2) {
       riskLevel = "High Risk";
       riskColor = "text-accent-crimson bg-accent-crimson/10 border-accent-crimson/20";
-      promptState = "Immediate clinical recommendation available based on active symptom markers.";
+      alertBar = {
+        title: "Clinical Vigilance Required",
+        message: "High BMI and multiple underlying conditions detected. Biological stability at risk.",
+        action: "Run Diagnostic",
+        link: "/dashboard/analyzer"
+      };
     } else if ((profile.bmi || 0) > 25 || (profile.conditions?.length || 0) > 0) {
       riskLevel = "Moderate Alert";
       riskColor = "text-yellow-600 bg-yellow-600/10 border-yellow-600/20";
-      promptState = "Mild deviations detected. Consider updating vitals.";
-    }
-    
-    if (profile.bmi === 0) {
-      promptState = "Profile missing critical biometric data. Please update.";
+      alertBar = {
+        title: "Metabolic Deviation Detected",
+        message: "Moderate biometric variance. Consider synchronizing clinical vitals.",
+        action: "Update Vitals",
+        link: "/dashboard/settings"
+      };
+    } else if (profile.bmi === 0) {
+      alertBar = {
+        title: "Biometric Incompletion",
+        message: "Neural twin cannot synchronize without baseline biometrics (Height/Weight).",
+        action: "Setup Profile",
+        link: "/dashboard/settings"
+      };
     }
   }
 
   // Digital Twin & Gamification Extracted Data
-  const healthScore = profile?.healthScore || 0;
+  const healthScore = profile?.healthScore || 72; // Baseline fallback
   const streak = profile?.streak || 0;
-  const latestInsights = profile?.healthInsights?.slice(-2).reverse() || [];
+  const intel = profile?.intelligence;
+  const osint = profile?.osint;
 
   return (
     <motion.div 
@@ -71,130 +149,173 @@ export default function DashboardPage() {
           {profile?.age ? `${profile.age}-year-old ${profile.gender}` : "Session analyzing current biometric markers."}
         </p>
 
-        {/* Action Row / Dynamic Prompt Area */}
-        {promptState && (
-           <div className="mt-4 p-3 rounded-xl bg-surface-container border border-surface-container-high text-sm font-semibold text-text-primary flex items-center justify-between shadow-sm">
-              <span>{promptState}</span>
-              <button className="px-4 py-1.5 bg-surface-low text-text-primary text-xs font-bold rounded-lg border border-surface-container shadow-sm hover:bg-surface-container transition-colors">Action Required</button>
-           </div>
+        {/* High-Impact Smart Alert Bar */}
+        {alertBar && (
+           <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-4 rounded-[24px] bg-surface-container-low border border-surface-container-high flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm"
+           >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-accent-crimson/10 flex items-center justify-center text-accent-crimson shrink-0">
+                  <AlertCircle size={24} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-text-primary uppercase tracking-tight">{alertBar.title}</h4>
+                  <p className="text-xs text-text-secondary font-medium">{alertBar.message}</p>
+                </div>
+              </div>
+              <Link href={alertBar.link} className="px-6 py-2.5 bg-primary text-white text-xs font-black rounded-xl shadow-md hover:bg-primary/90 transition-all uppercase tracking-widest flex items-center gap-2">
+                {alertBar.action} <ChevronRight size={14} />
+              </Link>
+           </motion.div>
         )}
       </motion.div>
 
       {/* 2. Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 w-full relative z-20">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 w-full relative z-20">
         
-        {/* Main large chart area */}
-        <motion.div 
-          variants={cardVariants}
-          className="lg:col-span-2 bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 shadow-sm hover:shadow-float transition-all duration-500 border border-border-glass flex flex-col justify-between overflow-hidden group min-h-[400px]"
-        >
-          <div className="flex justify-between items-start mb-8 z-20">
-            <div>
-              <h3 className="text-xl font-bold text-text-primary">Biometric Trajectory</h3>
-              <p className="text-sm text-text-secondary mt-1">7-day continuous analysis</p>
-            </div>
-            <div className={`px-4 py-1.5 rounded-full text-xs font-bold border ${riskColor}`}>
-              {riskLevel}
-            </div>
-          </div>
-
-          <div className="w-full h-[280px] relative mt-[10px] pb-2">
-            {/* Guaranteed SVG anti-crop bounding area */}
-            <div className="absolute inset-0 z-10 w-full h-full flex items-end pt-12 pr-6">
-              <svg width="100%" height="85%" preserveAspectRatio="none" viewBox="0 -20 1000 360" className="w-full h-full overflow-visible">
-                <defs>
-                   <linearGradient id="lineGradDash" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor={riskLevel === "High Risk" ? "#D92544" : "#8A1B33"} stopOpacity="0.2"/>
-                      <stop offset="100%" stopColor={riskLevel === "High Risk" ? "#D92544" : "#8A1B33"} stopOpacity="0"/>
-                   </linearGradient>
-                </defs>
-                <motion.path d="M0 250 Q 80 200 150 150 T 300 120 T 450 180 T 600 90 T 750 150 T 850 80 T 1000 120"
-                  stroke={riskLevel === "High Risk" ? "#D92544" : "#8A1B33"} strokeWidth="4" fill="none" strokeLinecap="round"
-                  initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
-                />
-                 <motion.path d="M0 250 Q 80 200 150 150 T 300 120 T 450 180 T 600 90 T 750 150 T 850 80 T 1000 120 L 1000 300 L 0 300 Z"
-                  fill="url(#lineGradDash)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 2, ease: "easeOut", delay: 0.8 }}
-                />
-              </svg>
-            </div>
-            
-            <div className="w-full flex justify-between text-[10px] text-text-secondary/70 font-bold uppercase tracking-wider px-2 z-20 mt-auto border-t border-surface-container-high/50 pt-2">
-               <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Today</span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Side panels */}
-        <div className="flex flex-col gap-6 relative z-20">
+        {/* Intelligence Panels */}
+        <div className="lg:col-span-2 flex flex-col gap-6 relative z-20">
+          
+          {/* 1. Today's Intelligence Panel */}
           <motion.div 
             variants={cardVariants}
-            className="flex-1 bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 shadow-sm hover:shadow-float transition-shadow border border-border-glass flex flex-col justify-center overflow-hidden"
+            className="bg-primary/5 rounded-[32px] p-6 border border-primary/20 relative overflow-hidden"
           >
-             <h4 className="text-lg font-bold text-text-primary mb-4">Patient Parameters</h4>
-             <div className="flex flex-col gap-3">
-               <div className="flex justify-between items-center bg-surface-low p-3 rounded-xl border border-surface-container-high">
-                  <span className="text-xs font-bold text-text-secondary uppercase">Allergies</span>
-                  <span className="text-sm font-bold text-text-primary truncate max-w-[120px]">{profile?.allergies?.length ? profile.allergies.join(", ") : "None Tracked"}</span>
-               </div>
-               <div className="flex justify-between items-center bg-surface-low p-3 rounded-xl border border-surface-container-high">
-                  <span className="text-xs font-bold text-text-secondary uppercase">Medications</span>
-                  <span className="text-sm font-bold text-text-primary truncate max-w-[120px]">{profile?.medications?.length ? profile.medications.join(", ") : "None Active"}</span>
-               </div>
-               <div className="flex justify-between items-center bg-surface-low p-3 rounded-xl border border-surface-container-high">
-                  <span className="text-xs font-bold text-text-secondary uppercase">Conditions</span>
-                  <span className="text-sm font-bold text-text-primary truncate max-w-[120px]">{profile?.conditions?.length ? profile.conditions.join(", ") : "None Reported"}</span>
-               </div>
+             <div className="absolute -right-4 -top-4 opacity-5 shrink-0">
+               <Brain size={120} />
              </div>
+             <h4 className="text-sm font-bold text-primary uppercase tracking-widest mb-3 flex items-center gap-2">
+               <Brain size={16} /> Today's Intelligence
+             </h4>
+             <p className="text-2xl font-bold text-text-primary leading-tight mb-2">
+               {intel?.dailyTip || "Neural engine synchronizing biometrics..."}
+             </p>
+             <p className="text-xs text-text-secondary font-medium">
+               {intel?.intelligenceBrief || "Fetching clinical context from your digital twin profile."}
+             </p>
           </motion.div>
+
+          {/* 2. OSINT Environmental OSINT Panel */}
+          <motion.div 
+            variants={cardVariants}
+            className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-6 shadow-sm border border-border-glass"
+          >
+             <h4 className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-4 flex items-center gap-2">
+               <Wind size={14} /> Environmental Pulse
+             </h4>
+             <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col items-center">
+                   <div className="w-10 h-10 rounded-full bg-accent-orange/10 flex items-center justify-center text-accent-orange mb-1">
+                      <Sun size={18} />
+                   </div>
+                   <span className="text-[10px] font-bold text-text-secondary uppercase">UV Index</span>
+                   <span className="text-sm font-black text-text-primary">{osint?.uv || "0"}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
+                      <Wind size={18} />
+                   </div>
+                   <span className="text-[10px] font-bold text-text-secondary uppercase">AQI</span>
+                   <span className="text-sm font-black text-text-primary">{osint?.aqi || "24"}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                   <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 mb-1">
+                      <Droplets size={18} />
+                   </div>
+                   <span className="text-[10px] font-bold text-text-secondary uppercase">Humidity</span>
+                   <span className="text-sm font-black text-text-primary">{osint?.humidity ? `${Math.round(osint.humidity)}%` : "45%"}</span>
+                </div>
+             </div>
+
+             {intel?.environmentalAnalysis && (
+               <div className="mt-4 p-3 bg-primary/5 rounded-2xl border border-primary/20">
+                 <p className="text-xs text-text-secondary leading-relaxed font-medium">
+                   <strong className="text-primary tracking-wide text-[10px] uppercase block mb-1">AI Context ({osint?.locationName || "Local"}):</strong>
+                   {intel.environmentalAnalysis}
+                 </p>
+               </div>
+             )}
+          </motion.div>
+
+        </div>
+
+        {/* Right Side Column */}
+        <div className="lg:col-span-2 flex flex-col gap-6 relative z-20">
           
-          {/* Digital Twin Insights */}
-          {latestInsights.length > 0 && (
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
+            
+            {/* Health Pattern */}
             <motion.div 
               variants={cardVariants}
-              className="flex-1 bg-surface-glass backdrop-blur-3xl rounded-[32px] p-6 shadow-sm border border-border-glass flex flex-col justify-center overflow-hidden"
+              className="bg-surface-glass backdrop-blur-3xl rounded-[28px] p-5 border border-border-glass group relative overflow-hidden flex flex-col justify-center"
             >
-              <h4 className="text-sm font-bold text-text-secondary uppercase tracking-tight mb-3">Twin Insights</h4>
-              <div className="flex flex-col gap-2">
-                {latestInsights.map((ins: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-surface-low rounded-xl border border-surface-container-high">
-                    <div className={`w-2 h-2 rounded-full ${ins.type === 'Pattern' ? 'bg-primary' : 'bg-accent-orange'}`} />
-                    <span className="text-[11px] font-bold text-text-primary leading-tight">{ins.content}</span>
-                  </div>
-                ))}
+                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><Activity size={32} /></div>
+                <h4 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1">Health Pattern</h4>
+                <p className="text-sm font-bold text-text-primary leading-tight">
+                  {intel?.digitalTwin.pattern || "Analyzing signatures..."}
+                </p>
+            </motion.div>
+
+            {/* Risk Trend */}
+            <motion.div 
+              variants={cardVariants}
+              className="bg-surface-glass backdrop-blur-3xl rounded-[28px] p-5 border border-border-glass group relative overflow-hidden flex flex-col justify-center"
+            >
+                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity"><AlertCircle size={32} /></div>
+                <h4 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1">Risk Trend</h4>
+                <p className="text-sm font-bold text-text-primary leading-tight">
+                  {intel?.digitalTwin.riskTrend || "Calculated: Stable."}
+                </p>
+            </motion.div>
+
+            {/* Health Score */}
+            <motion.div 
+              variants={cardVariants}
+              className="bg-primary rounded-[28px] p-5 shadow-lg border border-primary/50 flex flex-col justify-center text-white relative overflow-hidden"
+            >
+              <h4 className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-0.5">Health Score</h4>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black">{healthScore}</span>
+                <span className="text-[10px] font-bold text-white/60">/ 100</span>
               </div>
             </motion.div>
-          )}
 
-          <div className="flex gap-4">
+            {/* Current Streak */}
             <motion.div 
               variants={cardVariants}
-              className="flex-1 bg-primary/90 backdrop-blur-3xl rounded-[32px] p-6 shadow-md hover:shadow-float-heavy transition-all border border-primary/50 flex flex-col justify-center text-white relative overflow-hidden h-[180px]"
+              className="bg-surface-glass backdrop-blur-3xl rounded-[28px] p-5 shadow-sm border border-border-glass flex flex-col justify-center relative overflow-hidden"
             >
-               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-               <div className="relative z-10 flex items-center justify-between mb-2">
-                 <h4 className="text-sm font-bold text-white uppercase tracking-wider">Health Index</h4>
-               </div>
-               <div className="relative z-10 mt-auto">
-                 <span className="text-4xl font-black block mb-1">
-                    {healthScore || "N/A"}
-                 </span>
-                 <span className="text-[10px] font-medium text-white/80">Clinical Accuracy</span>
-               </div>
+              <h4 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-0.5 flex items-center gap-1">
+                  <Flame size={12} className="text-primary" /> Streak
+              </h4>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-primary">{streak}</span>
+                <span className="text-[10px] font-bold text-text-secondary">Days</span>
+              </div>
             </motion.div>
 
-            <motion.div 
-              variants={cardVariants}
-              className="flex-1 bg-surface-glass backdrop-blur-3xl rounded-[32px] p-6 shadow-sm border border-border-glass flex flex-col justify-center relative overflow-hidden h-[180px]"
-            >
-               <h4 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Streak</h4>
-               <div className="mt-auto">
-                 <span className="text-4xl font-black block text-primary mb-1">
-                    {streak}d
-                 </span>
-                 <span className="text-[10px] font-bold text-text-secondary">Consecutive Access</span>
-               </div>
-            </motion.div>
           </div>
+
+          {/* 3. Education / Briefing */}
+          <motion.div 
+            variants={cardVariants}
+            className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-6 shadow-sm border border-border-glass flex flex-col"
+          >
+             <h4 className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3">Intelligence Briefing</h4>
+             <Link href="/dashboard/briefing" className="block p-3 bg-surface-low rounded-2xl border border-surface-container-high transition-all hover:border-primary/30 group cursor-pointer hover:bg-white/5">
+               <h5 className="text-sm font-bold text-text-primary group-hover:text-primary transition-colors flex items-center justify-between">
+                 {intel?.education.title || "Clinical Concept"}
+                  <ChevronRight size={14} className="text-text-secondary group-hover:translate-x-1 transition-transform" />
+               </h5>
+               <p className="text-[11px] text-text-secondary mt-1 leading-relaxed">
+                 {intel?.education.explanation || "Loading clinical educational context related to your profile."}
+               </p>
+             </Link>
+          </motion.div>
+
         </div>
 
       </div>

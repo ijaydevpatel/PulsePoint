@@ -3,19 +3,25 @@ import User from '../models/User.js';
 
 // @desc    Calculate Health Score based on clinical markers
 const calculateHealthScore = (profile) => {
+  if (!profile.height || !profile.weight) {
+      // Estimated baseline for new users based on age
+      const base = profile.age ? Math.max(65, 95 - (profile.age / 5)) : 75;
+      return Math.round(base);
+  }
+
   let score = 100;
   
   // BMI deviance from 22.5 (Optimal baseline)
   const bmiDiff = Math.abs((profile.bmi || 22.5) - 22.5);
-  score -= Math.floor(bmiDiff * 2);
+  score -= Math.floor(bmiDiff * 2.5);
   
   // Conditions penalty
-  score -= (profile.conditions?.length || 0) * 10;
+  score -= (profile.conditions?.length || 0) * 8;
   
-  // Allergies penalty
-  score -= (profile.allergies?.length || 0) * 2;
+  // Allergies penalty (Minor clinical impact if managed)
+  score -= (profile.allergies?.length || 0) * 1.5;
   
-  return Math.max(10, Math.min(100, score));
+  return Math.max(10, Math.min(100, Math.round(score)));
 };
 
 // @desc    Calculate Streak based on temporal check-in gaps

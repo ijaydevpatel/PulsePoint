@@ -21,6 +21,29 @@ export interface UserProfile {
     content: string;
     timestamp: string;
   }>;
+  intelligence?: {
+    dailyTip: string;
+    dailyStatus: string;
+    intelligenceBrief: string;
+    digitalTwin: {
+      pattern: string;
+      riskTrend: string;
+      medInsight: string;
+    };
+    education: {
+      title: string;
+      explanation: string;
+    };
+    environmentalAnalysis?: string;
+  };
+  osint?: {
+    aqi: number;
+    uv: number;
+    pressure?: number;
+    humidity: number;
+    locationName?: string;
+    location: { lat: number; lon: number };
+  };
 }
 
 interface UserContextType {
@@ -47,7 +70,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     medications: Array.isArray(p.medications) ? p.medications : [],
     streak: p.streak || 0,
     healthScore: p.healthScore || 0,
-    healthInsights: Array.isArray(p.healthInsights) ? p.healthInsights : []
+    healthInsights: Array.isArray(p.healthInsights) ? p.healthInsights : [],
+    intelligence: p.intelligence || null,
+    osint: p.osint || null
   });
 
   useEffect(() => {
