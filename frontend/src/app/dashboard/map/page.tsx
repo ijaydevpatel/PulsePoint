@@ -87,13 +87,13 @@ export default function MapPage() {
           dist: calculateDistance(lat, lon, (el.lat || el.center?.lat), (el.lon || el.center?.lon))
         }))
         .filter((f: any) => filter.length > 1 ? (f.name.toLowerCase().includes(filter) || f.type.toLowerCase().includes(filter)) : true)
-        .sort((a, b) => (a.dist || 0) - (b.dist || 0))
+        .sort((a: Facility, b: Facility) => (a.dist || 0) - (b.dist || 0))
         .slice(0, 150);
 
         setFacilities(prev => {
             const ids = new Set(mapped.map(m => m.id));
             const filteredPrev = prev.filter(p => !ids.has(p.id));
-            return [...filteredPrev, ...mapped].sort((a,b) => (a.dist || 0) - (b.dist || 0));
+            return [...filteredPrev, ...mapped].sort((a: Facility, b: Facility) => (a.dist || 0) - (b.dist || 0));
         });
         setIsSearching(false);
         return;

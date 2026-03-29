@@ -26,7 +26,7 @@ export const checkMedicineCompatibility = async (req, res) => {
     }
 
     let profile = await Profile.findOne({ user: req.user._id });
-
+    
     // Resilient Fallback: Use standard metrics if profile is missing to ensure stability
     if (!profile) {
       console.warn(`[DiagnosticEngine] Profile missing for user ${req.user._id}. Using Guest Baseline.`);
@@ -68,46 +68,44 @@ export const checkMedicineCompatibility = async (req, res) => {
     ];
     const randomTheme = themes[Math.floor(Date.now() / 60000) % themes.length];
 
-    const systemInstruction = `You are a professional board-certified senior clinical pharmacist. You MUST respond with ONLY a valid JSON object. 
-Safety and clinical accuracy are your highest priorities.
+    const systemInstruction = `You are a Senior Research Clinical Pharmacist and Homeopathic Materia Medica Consultant. 
+You MUST respond with ONLY a valid JSON object. 
 
-STRICT CLINICAL TRUTHS:
-- CETIRIZINE, LORATADINE, FEXOFENADINE ARE 2ND GENERATION (Non-sedating).
-- DIPHENHYDRAMINE, CHLORPHENIRAMINE ARE 1ST GENERATION (Sedating).
+MODALITY GATING:
+- ALLOPATHIC: Use research-grade toxicology (CYP450 isoenzymes, NAPQI, hepatocyte metabolism). Physical Risk is REAL.
+- HOMEOPATHIC: Use Materia Medica logic (Vital Force, Miasmic layers, Antidoting). Physical Risk is 0% (Dilution >12C).
 
-STRICT PROMPT RULES:
-1. ANALOGY: Use a unique, deep analogy based on ${randomTheme}. 2-3 detailed paragraphs.
-2. TECHNICAL INGREDIENTS: Perform a DailyMed-grade label audit.
-   - Extract 'Active Ingredient' string with common dosages.
-   - Decompose 'Inactive Ingredients' into Binders, Coatings, and Additives.
-3. JSON SCHEMA:
+STRICT CLINICAL INTELLIGENCE REQUIREMENTS:
+1. TECHNICAL LABEL DECOMPOSITION (Mandatory): 
+   - ALLOPATHIC: Perform a DailyMed-standard audit. Extract Active APIs + Specific Binders (e.g. Croscarmellose), Coatings (e.g. Hypromellose), and Additives (e.g. Polysorbate 80). NO 'N/A'.
+   - HOMEOPATHIC: Base substance + Potency + Vehicle (Lactose/Alcohol).
+2. MEDICAL TERMINOLOGY: Use serious, valid clinical terms. Avoid overly simple language. 
+3. EXPLANATION: 6-8 sentence exhaustive deep-dive. Use the analogy based on ${randomTheme}.
+4. INTERACTION CAUSE: Specific biochemical/energetic mechanism. Min 4 sentences.
+
+JSON SCHEMA:
 {
-  "explanation": "6-8 sentence deep-dive analysis. Must integrate high-level medical terminology (e.g., CYP450 isoenzymes, hepatocyte glutathione depletion, toxic metabolites like NAPQI, first-pass metabolism). Use the analogy but maintain a serious clinical tone. No bolding.",
+  "isHomeopathic": true | false,
+  "explanation": "Detailed clinical deep-dive with the ${randomTheme} analogy. No bolding.",
   "techIngredients1": {
-    "active": "API Name (Common dosages)",
-    "inactive": {
-      "binders": "Fillers/Binders list",
-      "coatings": "Glazing/Coating agents",
-      "additives": "Other additives/colorants"
-    }
+    "active": "Full Active Ingredient + Dosage",
+    "inactive": { "binders": "Specific pharmaceutical binders", "coatings": "Coating agents", "additives": "Colorants/Preservatives" }
   },
   "techIngredients2": {
-    "active": "API Name (Common dosages)",
-    "inactive": {
-      "binders": "Fillers/Binders list",
-      "coatings": "Glazing/Coating agents",
-      "additives": "Other additives/colorants"
-    }
+    "active": "Full Active Ingredient + Dosage",
+    "inactive": { "binders": "Specific pharmaceutical binders", "coatings": "Coating agents", "additives": "Colorants/Preservatives" }
   },
-  "interactionCause": "Exhaustive physiological and pharmacological breakdown of how these agents collide. Min 3 sentences.",
-  "metabolicPathway": "Specific enzyme (CYP450, etc.) and systemic pathway affected in detail.",
-  "clinicalSeverityNote": "Detailed clinical rationale including half-life and clearance impact.",
-  "patientAdvice": "Comprehensive, multi-point patient guidance and safety maneuvers.",
+  "interactionCause": "Pharmacological Collision Logic (Allopathy) OR Energetic Antidoting Logic (Homeopathy).",
+  "metabolicPathway": "Specific enzyme/pathway (Allopathy) OR Vital Force/Interference Level (Homeopathy).",
+  "clinicalSeverityNote": "Mechanism-based risk analysis.",
+  "interferenceScore": 0-100 (for Homeopathy),
+  "riskPercentage": 0-100 (Physical risk, MUST be 0 for Homeopathy),
   "detectedRisk": "Low | Medium | High | Critical",
-  "safeAlternatives": ["Alternative 1", "Alternative 2"],
-  "warnings": ["Warning 1", "Warning 2"]
+  "patientAdvice": "Exhaustive clinical advice.",
+  "safeAlternatives": ["Clinical Alternative 1", "Clinical Alternative 2"],
+  "warnings": ["Clinical Warning 1", "Clinical Warning 2"]
 }
-4. NO MARKDOWN: No bolding (**). No think tags. No preamble. Return JSON ONLY.`;
+NO MARKDOWN. Return JSON ONLY.`;
 
     const promptText = `TECHNICAL LABEL AUDIT:
 Agent A: ${med1}
@@ -185,10 +183,22 @@ Extract full technical ingredients (Active + Inactive decomposition) and analyze
       ? "Interaction Warning" 
       : (finalRisk === "Medium") ? "Caution Advised" : "Generally Safe";
 
+    const percentageMap = { "Low": 20, "Medium": 50, "High": 80, "Critical": 100 };
+    
+    // Determine MODALITY
+    const isHomeo = parsedResponse.isHomeopathic || false;
+    
+    // Deterministic Risk Logic
+    const finalPercentage = isHomeo ? 0 : (percentageMap[finalRisk] || 10);
+    const finalInterference = isHomeo ? (parsedResponse.interferenceScore || percentageMap[finalRisk] || 10) : 0;
+
     res.json({
        compatibilityVerdict: finalVerdict,
        riskLevel: finalRisk,
-       dangerDetected: (finalRisk === "High" || finalRisk === "Critical"),
+       riskPercentage: finalPercentage,
+       interferenceScore: finalInterference,
+       isHomeopathic: isHomeo,
+       dangerDetected: !isHomeo && (finalRisk === "High" || finalRisk === "Critical"),
        conflictFlags: isContraindicated ? ["Direct Database Match"] : [],
        ...parsedResponse
     });

@@ -1,27 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { Pill, Activity, AlertTriangle, GitCompare, CheckCircle2 } from "lucide-react";
 
 import { apiClient } from "@/lib/api";
 
-const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: string }) => {
-  const color = 
-    percentage < 30 ? "#3b82f6" : // Sleek Blue (Safe)
-    percentage < 70 ? "#8b5cf6" : // Sleek Purple (Caution)
-    "#ef4444"; // Crimson (Danger)
+const RiskGauge = ({ percentage, riskLevel, mode = "toxicology" }: { percentage: number, riskLevel: string, mode?: "toxicology" | "interference" }) => {
+  const color = mode === "interference" 
+    ? (percentage < 30 ? "#22d3ee" : percentage < 70 ? "#818cf8" : "#c084fc") // Cyan -> Indigo -> Violet
+    : (percentage < 30 ? "#3b82f6" : percentage < 70 ? "#8b5cf6" : "#ef4444"); // Blue -> Purple -> Red
 
-  // Calculate Knob position based on 180 degree arc
   const radius = 110;
   const cx = 150;
   const cy = 140;
-  const theta = Math.PI - (percentage / 100) * Math.PI;
-  const knobX = cx + radius * Math.cos(theta);
-  const knobY = cy - radius * Math.sin(theta);
-
   const circumference = Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  const motionPercentage = useMotionValue(0);
+  
+  useEffect(() => {
+    animate(motionPercentage, percentage || 0, { duration: 1.5, ease: "easeOut" });
+  }, [percentage, motionPercentage]);
+
+  const knobX = useTransform(motionPercentage, (v) => cx + radius * Math.cos(Math.PI - (v / 100) * Math.PI));
+  const knobY = useTransform(motionPercentage, (v) => cy - radius * Math.sin(Math.PI - (v / 100) * Math.PI));
+  const strokeDashoffset = useTransform(motionPercentage, (v) => circumference - (v / 100) * circumference);
+  const roundedPercentage = useTransform(motionPercentage, (v) => Math.round(v));
 
   return (
     <div className="relative w-full h-[220px] flex items-center justify-center pt-8 select-none">
@@ -48,15 +52,11 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
           strokeWidth="16.5" 
           strokeLinecap="round" 
           strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          style={{ strokeDashoffset }}
         />
 
         <motion.circle 
-          initial={{ cx: cx - radius, cy: cy }}
-          animate={{ cx: knobX, cy: knobY }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          style={{ cx: knobX, cy: knobY }}
           r="8" 
           fill={color} 
           stroke="var(--color-surface-glass)" 
@@ -65,9 +65,7 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
         />
         
         <motion.circle 
-          initial={{ cx: cx - radius, cy: cy }}
-          animate={{ cx: knobX, cy: knobY }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
+          style={{ cx: knobX, cy: knobY }}
           r="2.5" 
           fill="white" 
         />
@@ -80,11 +78,16 @@ const RiskGauge = ({ percentage, riskLevel }: { percentage: number, riskLevel: s
           transition={{ delay: 0.5 }}
           className="text-5xl font-black tracking-tighter leading-none text-text-primary" 
         >
-          {percentage}%
+          <motion.span>{roundedPercentage}</motion.span>%
         </motion.span>
         <span className="text-[12px] font-bold uppercase tracking-[0.2em] opacity-60 mt-2" style={{ color }}>
           {riskLevel || "Risk Index"}
         </span>
+        {mode === "interference" && (
+           <div className="mt-4 px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
+             <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Physical Risk: 0%</p>
+           </div>
+        )}
       </div>
     </div>
   );
@@ -228,18 +231,22 @@ export default function MedicinePage() {
             ) : (
               <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full h-full bg-surface-glass backdrop-blur-3xl border border-border-glass shadow-md rounded-[32px] flex flex-col overflow-y-auto hide-scrollbar p-6">
                  
-                 <div className={`flex flex-col items-center justify-center p-12 ${resultData?.dangerDetected ? 'bg-accent-crimson/5 border-accent-crimson/20' : 'bg-green-600/5 border-green-600/20'} border rounded-[40px] mb-8 relative overflow-visible min-h-[300px]`}>
-                    <RiskGauge riskLevel={resultData?.riskLevel || "Low"} percentage={resultData?.riskPercentage || 0} />
+                  <div className={`flex flex-col items-center justify-center p-12 ${resultData?.isHomeopathic ? 'bg-blue-600/5 border-blue-600/20' : resultData?.dangerDetected ? 'bg-accent-crimson/5 border-accent-crimson/20' : 'bg-green-600/5 border-green-600/20'} border rounded-[40px] mb-8 relative overflow-visible min-h-[300px]`}>
+                    <RiskGauge 
+                      riskLevel={resultData?.riskLevel || "Low"} 
+                      percentage={resultData?.isHomeopathic ? (resultData?.interferenceScore || 0) : (resultData?.riskPercentage || 0)} 
+                      mode={resultData?.isHomeopathic ? "interference" : "toxicology"}
+                    />
                     
                     <div className="flex flex-col items-center text-center mt-6">
-                       <h2 className={`text-3xl font-black ${resultData?.dangerDetected ? 'text-accent-crimson' : 'text-green-600'} uppercase tracking-tight`}>
-                         {typeof resultData?.riskLevel === 'string' ? resultData.riskLevel : (resultData?.riskLevel ? JSON.stringify(resultData.riskLevel) : 'UNKNOWN')} RISK PROFILE
+                       <h2 className={`text-3xl font-black ${resultData?.isHomeopathic ? 'text-blue-400' : resultData?.dangerDetected ? 'text-accent-crimson' : 'text-green-600'} uppercase tracking-tight`}>
+                         {resultData?.isHomeopathic ? 'Therapeutic' : resultData?.riskLevel} {resultData?.isHomeopathic ? 'Interference' : 'RISK PROFILE'}
                        </h2>
                        <p className="text-sm font-bold text-text-primary mt-2 opacity-80 uppercase tracking-widest">
-                         {typeof resultData?.compatibilityVerdict === 'string' ? resultData.compatibilityVerdict : (resultData?.compatibilityVerdict ? JSON.stringify(resultData.compatibilityVerdict) : '')}
+                         {resultData?.isHomeopathic ? 'Homeopathic Synergy Alert' : resultData?.compatibilityVerdict}
                        </p>
                     </div>
-                 </div>
+                  </div>
 
                  <div className="flex flex-col gap-6">
 
@@ -261,7 +268,9 @@ export default function MedicinePage() {
                       )}
 
                       <div className="mt-2">
-                        <h4 className="font-bold text-text-primary mb-2 text-sm uppercase tracking-wider">Metabolic Reaction Profile</h4>
+                        <h4 className="font-bold text-text-primary mb-2 text-sm uppercase tracking-wider">
+                          {resultData?.isHomeopathic ? 'Vital Force Dynamics' : 'Metabolic Reaction Profile'}
+                        </h4>
                         <div className="text-sm text-text-secondary leading-relaxed bg-surface-low p-4 rounded-xl border border-surface-container">
                           {typeof resultData?.explanation === 'string' ? (
                             <p>{resultData.explanation}</p>
@@ -364,7 +373,9 @@ export default function MedicinePage() {
                         <div className="flex flex-col gap-5 relative z-10">
                           {resultData?.metabolicPathway && (
                             <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                              <span className="text-[10px] font-black text-blue-400/60 block mb-1.5 uppercase tracking-widest">Metabolic Logistics</span>
+                              <span className="text-[10px] font-black text-blue-400/60 block mb-1.5 uppercase tracking-widest">
+                                {resultData?.isHomeopathic ? "Energetic Interference Level" : "Metabolic Logistics"}
+                              </span>
                               <p className="text-xs text-text-secondary leading-relaxed font-medium">{resultData.metabolicPathway}</p>
                             </div>
                           )}

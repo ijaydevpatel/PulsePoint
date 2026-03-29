@@ -122,8 +122,22 @@ FINAL CHECK: Ensure NO bolding (**) in any field. Use analogies. Return JSON onl
       };
     }
 
+    // 6. AGGRESSIVE SANITIZATION: Force-strip all markdown bold/italics from entire object
+    const cleanObj = (obj) => {
+      if (typeof obj === 'string') return obj.replace(/\*\*|\*/g, '').trim();
+      if (Array.isArray(obj)) return obj.map(cleanObj);
+      if (typeof obj === 'object' && obj !== null) {
+        const newObj = {};
+        for (const key in obj) newObj[key] = cleanObj(obj[key]);
+        return newObj;
+      }
+      return obj;
+    };
+
+    const sanitizedResponse = cleanObj(parsedResponse);
+
     res.json({
-       ...parsedResponse,
+       ...sanitizedResponse,
        isEmergencyOverride: false,
     });
 

@@ -123,10 +123,8 @@ export default function MapComponent({ userLocation, facilities, focusedFacility
       .setLngLat([userLocation[1], userLocation[0]])
       .addTo(map.current);
     
-    // Initial flyTo only on startup/refesh
-    if (markers.current.length === 0) {
-        map.current.flyTo({ center: [userLocation[1], userLocation[0]], zoom: 17, duration: 2500 });
-    }
+    // Fly to user location whenever it updates (e.g. via GPS button)
+    map.current.flyTo({ center: [userLocation[1], userLocation[0]], zoom: 17, duration: 2500 });
   }, [userLocation, isReady]);
 
   // Decoupled Focus Flight (Selection Zoom)
