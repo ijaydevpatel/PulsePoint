@@ -109,6 +109,19 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     fetchProfile();
+
+    // Heartbeat: Automatic token refresh every 50 seconds to prevent expiry
+    const heartbeat = setInterval(async () => {
+      if (isLoaded \u0026\u0026 isSignedIn) {
+        const token = await getToken();
+        if (token) {
+          localStorage.setItem("pulsepo!int_token", token);
+          console.log("[AuthHeartbeat] Neural token refreshed.");
+        }
+      }
+    }, 50000);
+
+    return () => clearInterval(heartbeat);
   }, [isLoaded, isSignedIn, clerkUser?.id]);
 
   const logout = async () => {

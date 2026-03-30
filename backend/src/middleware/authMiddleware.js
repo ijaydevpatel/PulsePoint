@@ -30,7 +30,8 @@ const protect = async (req, res, next) => {
     // Verify the Clerk JWT session token using standalone verifyToken function as required by v3.x
     const payload = await verifyToken(token, {
       secretKey: finalSecret,
-      publishableKey: finalPublish
+      publishableKey: finalPublish,
+      leeway: 60
     });
     const clerkUserId = payload.sub;
 
