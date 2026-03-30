@@ -38,11 +38,15 @@ export default function SignupPage() {
   };
 
   const handleGoogle = async () => {
-    await signUp.sso({
-      strategy: "oauth_google",
-      redirectCallbackUrl: "/sso-callback",
-      redirectUrl: "/profile-setup",
-    });
+    try {
+      await signUp?.sso({
+        strategy: "oauth_google",
+        redirectUrl: "/profile-setup",
+        redirectCallbackUrl: "/sso-callback"
+      });
+    } catch (err: any) {
+      setLocalError("Google signup initialization failed.");
+    }
   };
 
   const handleVerify = async (formData: FormData) => {

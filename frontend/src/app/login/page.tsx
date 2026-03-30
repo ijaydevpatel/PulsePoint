@@ -51,11 +51,15 @@ export default function LoginPage() {
   };
 
   const handleGoogle = async () => {
-    await signIn.sso({
-      strategy: "oauth_google",
-      redirectCallbackUrl: "/sso-callback",
-      redirectUrl: "/dashboard",
-    });
+    try {
+      await signIn?.sso({
+        strategy: "oauth_google",
+        redirectUrl: "/dashboard",
+        redirectCallbackUrl: "/sso-callback"
+      });
+    } catch (err: any) {
+      setLocalError("Google login initialization failed.");
+    }
   };
 
   const handleVerify = async (formData: FormData) => {
