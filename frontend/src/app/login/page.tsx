@@ -11,7 +11,7 @@ import { VerificationCode } from "@/components/core/VerificationCode";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, setActive, fetchStatus, errors } = useSignIn() as any;
   const { isLoaded, isSignedIn } = useAuth();
   
   // Auto-redirect if already authenticated
@@ -22,10 +22,57 @@ export default function LoginPage() {
   }, [isLoaded, isSignedIn, router]);
 
   const [showVerify, setShowVerify] = useState(false);
-  const [code, setCode] = useState("");
+  const [showReset, setShowReset] = useState(false);
+  const [resetStep, setResetStep] = useState<"email" | "code">("email");
   const [localError, setLocalError] = useState("");
 
   const isLoading = fetchStatus === "fetching";
+
+  const handleResetStart = async (formData: FormData) => {
+    setLocalError("");
+    const emailAddress = formData.get("email") as string;
+    if (!emailAddress || !signIn) {
+      setLocalError("Please enter your email to reset password.");
+      return;
+    }
+
+    try {
+      // Step 1: Initialize sign in with the email
+      await signIn.create({ identifier: emailAddress });
+      
+      // Step 2: Prepare the reset password factor
+      await signIn.prepareFirstFactor({
+        strategy: "reset_password_email_code",
+      });
+      
+      setResetStep("code");
+    } catch (err: any) {
+      setLocalError(err.errors?.[0]?.longMessage || "Failed to start reset flow.");
+    }
+  };
+
+  const handleResetSubmit = async (formData: FormData) => {
+    setLocalError("");
+    const code = formData.get("code") as string;
+    const password = formData.get("new-password") as string;
+
+    if (!signIn) return;
+
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: "reset_password_email_code",
+        code,
+        password,
+      });
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        router.push("/dashboard");
+      }
+    } catch (err: any) {
+      setLocalError(err.errors?.[0]?.longMessage || "Reset failed. Check code.");
+    }
+  };
 
   const handleSubmit = async (formData: FormData) => {
     setLocalError("");
@@ -41,7 +88,7 @@ export default function LoginPage() {
 
     if (signIn.status === "complete") {
       await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
+        navigate: ({ decorateUrl }: any) => {
           const url = decorateUrl("/dashboard");
           if (url.startsWith("http")) {
             window.location.href = url;
@@ -51,7 +98,6 @@ export default function LoginPage() {
         },
       });
     } else if (signIn.status === "needs_client_trust") {
-      // Email verification code required (Client Trust feature)
       await signIn.mfa.sendEmailCode();
       setShowVerify(true);
     } else {
@@ -78,7 +124,7 @@ export default function LoginPage() {
 
     if (signIn.status === "complete") {
       await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
+        navigate: ({ decorateUrl }: any) => {
           const url = decorateUrl("/dashboard");
           if (url.startsWith("http")) {
             window.location.href = url;
@@ -111,6 +157,18 @@ export default function LoginPage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
   };
 
+  const getTitle = () => {
+    if (showReset) return "Reset Password";
+    if (showVerify) return "Verify Identity";
+    return "Login";
+  };
+
+  const getSubtitle = () => {
+    if (showReset) return resetStep === "email" ? "Enter email to receive reset code" : "Enter code and new password";
+    if (showVerify) return "Enter the code sent to your email";
+    return "Verify identity to access dashboard";
+  };
+
   return (
     <div className="min-h-[90vh] bg-transparent flex items-center justify-center p-6 relative z-10 w-full mb-16">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
@@ -126,10 +184,10 @@ export default function LoginPage() {
             <Logo variant="icon" iconClassName="w-12 h-12" />
           </Link>
           <h1 className="text-3xl font-sans font-bold text-text-primary tracking-tight mb-2">
-            {showVerify ? "Verify Identity" : "Login"}
+            {getTitle()}
           </h1>
           <p className="text-sm font-medium text-text-secondary">
-            {showVerify ? "Enter the code sent to your email" : "Verify identity to access dashboard"}
+            {getSubtitle()}
           </p>
         </motion.div>
 
@@ -143,7 +201,74 @@ export default function LoginPage() {
           </motion.div>
         )}
 
-        {!showVerify ? (
+        {showReset ? (
+          <form 
+            onSubmit={(e) => { 
+              e.preventDefault(); 
+              const fd = new FormData(e.currentTarget);
+              resetStep === "email" ? handleResetStart(fd) : handleResetSubmit(fd);
+            }} 
+            className="flex flex-col gap-4"
+          >
+            {resetStep === "email" ? (
+              <motion.div variants={itemVariants as any} className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary transition-colors" size={18} />
+                <input
+                  id="reset-email"
+                  name="email"
+                  type="email"
+                  placeholder="Email Address"
+                  className="w-full bg-surface-low border border-border-glass rounded-xl py-4 pl-12 pr-4 text-sm font-medium text-text-primary focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-text-secondary/50 shadow-sm"
+                  required
+                />
+              </motion.div>
+            ) : (
+              <>
+                <motion.div variants={itemVariants as any} className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary transition-colors" size={18} />
+                  <input
+                    name="code"
+                    type="text"
+                    placeholder="6-digit Code"
+                    className="w-full bg-surface-low border border-border-glass rounded-xl py-4 pl-12 pr-4 text-sm font-medium text-text-primary focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-text-secondary/50 shadow-sm"
+                    required
+                  />
+                </motion.div>
+                <motion.div variants={itemVariants as any} className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary transition-colors" size={18} />
+                  <input
+                    name="new-password"
+                    type="password"
+                    placeholder="New Password"
+                    className="w-full bg-surface-low border border-border-glass rounded-xl py-4 pl-12 pr-4 text-sm font-medium text-text-primary focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-text-secondary/50 shadow-sm"
+                    required
+                  />
+                </motion.div>
+              </>
+            )}
+
+            <motion.div variants={itemVariants as any} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-3">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-primary hover:bg-primary-hover shadow-md hover:shadow-lg transition-all py-4 rounded-xl text-white font-sans font-bold flex items-center justify-center gap-2 disabled:opacity-70 disabled:pointer-events-none"
+              >
+                {isLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <> {resetStep === "email" ? "Send Reset Code" : "Update Password"} <ArrowRight size={18} /></>
+                )}
+              </button>
+            </motion.div>
+            <button
+              type="button"
+              onClick={() => { setShowReset(false); setResetStep("email"); }}
+              className="text-sm text-text-secondary hover:text-primary transition-colors text-center"
+            >
+              ← Back to login
+            </button>
+          </form>
+        ) : !showVerify ? (
           <form onSubmit={(e) => { e.preventDefault(); handleSubmit(new FormData(e.currentTarget)); }} className="flex flex-col gap-4">
             <motion.div variants={itemVariants as any} className="relative group">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary transition-colors" size={18} />
@@ -168,12 +293,13 @@ export default function LoginPage() {
                 required
               />
               <div className="flex justify-end mt-2 px-1">
-                <Link 
-                  href="https://accounts.clerk.com/user/password-reset" 
+                <button 
+                  type="button"
+                  onClick={() => setShowReset(true)}
                   className="text-xs font-semibold text-text-secondary hover:text-primary transition-colors"
                 >
                   Forgot Password?
-                </Link>
+                </button>
               </div>
             </motion.div>
 
