@@ -167,6 +167,14 @@ export default function LoginPage() {
                 className="w-full bg-surface-low border border-border-glass rounded-xl py-4 pl-12 pr-4 text-sm font-medium text-text-primary focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-text-secondary/50 shadow-sm"
                 required
               />
+              <div className="flex justify-end mt-2 px-1">
+                <Link 
+                  href="https://accounts.clerk.com/user/password-reset" 
+                  className="text-xs font-semibold text-text-secondary hover:text-primary transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
             </motion.div>
 
             <motion.div variants={itemVariants as any} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-3">
