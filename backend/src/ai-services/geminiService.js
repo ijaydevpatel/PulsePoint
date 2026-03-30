@@ -17,7 +17,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
  */
 export const callGeminiVision = async (fileBuffer, mimeType, basePrompt = "", textContext = "") => {
   // Ordered by priority (Surgical Persistence Baseline)
-  const modelsToTry = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-exp"];
+  const modelsToTry = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-exp"];
   let lastError = null;
 
   for (const modelName of modelsToTry) {
