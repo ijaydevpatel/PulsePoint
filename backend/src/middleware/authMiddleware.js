@@ -31,7 +31,7 @@ const protect = async (req, res, next) => {
     const payload = await verifyToken(token, {
       secretKey: finalSecret,
       publishableKey: finalPublish,
-      leeway: 300
+      leeway: 600
     });
     const clerkUserId = payload.sub;
 
@@ -40,15 +40,12 @@ const protect = async (req, res, next) => {
 
     if (!user) {
       // Lazy-create a linked user on first authenticated API call
-      // Because clerkClient uses finalSecret, this will never throw a missing key error
       const clerkUser = await clerkClient.users.getUser(clerkUserId);
       const email = clerkUser.emailAddresses?.[0]?.emailAddress || '';
 
-      // Check if user already exists by email (e.g. they completely swapped Clerk instances/keys)
       user = await User.findOne({ email });
 
       if (user) {
-        // Seamlessly reconnect their old local MongoDB schema to their new Clerk ID!
         user.clerkId = clerkUserId;
         await user.save();
       } else {
@@ -58,7 +55,6 @@ const protect = async (req, res, next) => {
           profileCompleted: false,
         });
 
-        // Auto-create empty Profile for this new user
         try {
           const ProfileModel = (await import('../models/Profile.js')).default;
           await ProfileModel.create({
@@ -66,7 +62,6 @@ const protect = async (req, res, next) => {
             emergencyContact: { name: '', phone: '', relation: '' }
           });
         } catch (profileErr) {
-          // Profile may already exist — ignore duplicate key errors
           if (profileErr.code !== 11000) console.error('[Auth] Profile init error:', profileErr.message);
         }
       }
@@ -75,8 +70,14 @@ const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('[AuthMiddleware] Clerk Token/Client Error:', error.message);
-    return res.status(401).json({ status: 'error', message: `Token Verification Failed: ${error.message}` });
+    const isExpired = error.message?.includes('expired');
+    console.error(`[AuthMiddleware] ${isExpired ? 'SESSION EXPIRED' : 'VERIFICATION ERROR'}:`, error.message);
+    
+    // Transparent diagnostic feedback for the user
+    return res.status(401).json({ 
+      status: 'error', 
+      message: `Session Link Interrupted: ${error.message}. (Leeway: 600s). Check your computer clock and refresh page.` 
+    });
   }
 };
 

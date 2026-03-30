@@ -1,19 +1,36 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-const getToken = (): string | null =>
-  typeof window !== 'undefined' ? localStorage.getItem('pulsepo!int_token') : null;
+type TokenProvider = () => Promise<string | null>;
+let tokenProvider: TokenProvider | null = null;
 
 export const apiClient = {
+  /**
+   * Inject a dynamic token provider (e.g. from Clerk)
+   */
+  setTokenProvider(provider: TokenProvider) {
+    tokenProvider = provider;
+  },
+
+  async getHeaders(): Promise<Record<string, string>> {
+    let token = null;
+    if (tokenProvider) {
+      token = await tokenProvider();
+    } else if (typeof window !== 'undefined') {
+      token = localStorage.getItem('pulsepo!int_token');
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+  },
 
   async get(endpoint: string): Promise<any> {
-    const token = getToken();
+    const headers = await this.getHeaders();
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      }
+      headers
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'API Network Get Fault');
@@ -21,15 +38,12 @@ export const apiClient = {
   },
 
   async post(endpoint: string, body: any): Promise<any> {
-    const token = getToken();
     const isFormData = body instanceof FormData;
-
-    const headers: Record<string, string> = {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    };
-
-    if (!isFormData) {
-      headers['Content-Type'] = 'application/json';
+    const headers = await this.getHeaders();
+    
+    // FormData handles its own boundary headers
+    if (isFormData) {
+      delete headers['Content-Type'];
     }
 
     const response = await fetch(`${API_URL}${endpoint}`, {
@@ -45,14 +59,11 @@ export const apiClient = {
   },
 
   async put(endpoint: string, body: any): Promise<any> {
-    const token = getToken();
+    const headers = await this.getHeaders();
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'PUT',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers,
       body: JSON.stringify(body)
     });
     const data = await response.json();
@@ -61,28 +72,23 @@ export const apiClient = {
   },
 
   async delete(endpoint: string): Promise<any> {
-    const token = getToken();
+    const headers = await this.getHeaders();
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'DELETE',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      }
+      headers
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'API Network Delete Fault');
     return data;
   },
+
   async stream(endpoint: string, body: any, onChunk: (text: string) => void): Promise<void> {
-    const token = getToken();
+    const headers = await this.getHeaders();
     const response = await fetch(`${API_URL}${endpoint}`, {
       method: 'POST',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
+      headers,
       body: JSON.stringify(body)
     });
 

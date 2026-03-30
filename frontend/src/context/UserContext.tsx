@@ -85,13 +85,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    // Sync token provider with the API client
+    apiClient.setTokenProvider(() => getToken());
+
     const fetchProfile = async () => {
       try {
-        const token = await getToken();
-        if (token) {
-          localStorage.setItem("pulsepo!int_token", token);
-        }
-
         const data = await apiClient.get("/profile");
         if (data && data.fullName) {
           const sanitized = sanitizeProfile(data);
