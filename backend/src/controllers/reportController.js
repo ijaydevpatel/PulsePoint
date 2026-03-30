@@ -38,7 +38,7 @@ export const analyzeReport = async (req, res) => {
     console.log(`[Analyzer] Handing off ${req.file.mimetype} to High-Fidelity Pipeline...`);
     
     // ── Unified Diagnostic Execution ─────────────────────────────────────────
-    const { text: aiRawReply, method, modelName } = await extractDocumentContent(req.file.buffer, req.file.mimetype);
+    const { text: aiRawReply, method, modelName } = await extractDocumentContent(req.file.buffer, req.file.mimetype, clinicalPrompt);
     console.log(`[Analyzer] Raw AI Reply (${method}):`, aiRawReply.substring(0, 100) + '...');
 
     let parsedResponse;

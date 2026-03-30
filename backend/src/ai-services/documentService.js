@@ -8,7 +8,7 @@ const pdfParse = require('pdf-parse');
  * PulsePo!int Document Processor
  * Routes to local Fast-Extraction or Cloud High-Fidelity Gemini
  */
-export const extractDocumentContent = async (fileBuffer, mimeType) => {
+export const extractDocumentContent = async (fileBuffer, mimeType, customPrompt = null) => {
   // ── Digital PDF Strategy (Fast & Free) ───────────────────────────────────
   if (mimeType === 'application/pdf') {
     try {
@@ -17,7 +17,7 @@ export const extractDocumentContent = async (fileBuffer, mimeType) => {
 
       if (text && text.length > 200) {
         console.log(`[Document] Digital PDF Extraction: ${text.length} chars.`);
-        const { text: analysis, modelName } = await callGeminiVision(null, 'text/plain', 'Perform clinical analysis.', text);
+        const { text: analysis, modelName } = await callGeminiVision(null, 'text/plain', customPrompt || 'Perform clinical analysis.', text);
         return { text: analysis, method: 'pdf-text-gemini', modelName };
       }
     } catch (err) {
@@ -25,13 +25,13 @@ export const extractDocumentContent = async (fileBuffer, mimeType) => {
     }
     
     // Scanned PDF Strategy
-    const { text: visionAnalysis, modelName } = await callGeminiVision(fileBuffer, mimeType, 'Analyze scanned PDF.');
+    const { text: visionAnalysis, modelName } = await callGeminiVision(fileBuffer, mimeType, customPrompt || 'Analyze scanned PDF.');
     return { text: visionAnalysis, method: 'gemini-vision-pdf', modelName };
   }
 
   // ── Image Strategy (Multimodal) ──────────────────────────────────────────
   if (mimeType.startsWith('image/')) {
-    const { text: analysis, modelName } = await callGeminiVision(fileBuffer, mimeType, 'Analyze medical image.');
+    const { text: analysis, modelName } = await callGeminiVision(fileBuffer, mimeType, customPrompt || 'Analyze medical image.');
     return { text: analysis, method: 'gemini-vision-image', modelName };
   }
 
