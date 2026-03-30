@@ -5,13 +5,22 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, User, ArrowRight, KeyRound } from "lucide-react";
-import { useSignUp } from "@clerk/nextjs";
+import { useSignUp, useAuth } from "@clerk/nextjs";
 import { Logo } from "@/components/core/Logo";
 import { VerificationCode } from "@/components/core/VerificationCode";
 
 export default function SignupPage() {
   const router = useRouter();
   const { signUp, errors, fetchStatus } = useSignUp();
+  const { isLoaded, isSignedIn } = useAuth();
+  
+  // Auto-redirect if already authenticated
+  React.useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   const [localError, setLocalError] = useState("");
   const [showVerify, setShowVerify] = useState(false);
 
