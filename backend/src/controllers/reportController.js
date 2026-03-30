@@ -82,6 +82,10 @@ export const analyzeReport = async (req, res) => {
 
   } catch (error) {
     console.error('[Analyzer] Unhandled error:', error.message);
-    res.status(500).json({ message: 'Report Analysis Fault', error: error.message });
+    // Return specific error to help with free-tier debugging (e.g. Quota Exceeded)
+    res.status(500).json({ 
+      message: 'Report Analysis Fault', 
+      detail: error.message.includes('quota') ? 'AI Quota Exceeded. Please try again in a moment.' : error.message 
+    });
   }
 };

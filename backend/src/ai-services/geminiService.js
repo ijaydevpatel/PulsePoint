@@ -16,8 +16,8 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
  * @param {string} textContext - Pre-extracted text
  */
 export const callGeminiVision = async (fileBuffer, mimeType, basePrompt = "", textContext = "") => {
-  // Ordered by priority: Surgical (2.0), High Fidelity (1.5), High Capacity (1.5-8B)
-  const modelsToTry = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.5-flash"];
+  // Ordered by priority (Free Tier High Performance)
+  const modelsToTry = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
   let lastError = null;
 
   for (const modelName of modelsToTry) {
@@ -35,19 +35,18 @@ export const callGeminiVision = async (fileBuffer, mimeType, basePrompt = "", te
         ]
       });
 
-      const finalPrompt = `
+      // If a specific basePrompt (like from reportController) is provided, 
+      // we use it as the main instruction to avoid redundancy.
+      const finalPrompt = basePrompt ? `
         ${basePrompt}
         
-        [DOCUMENT CONTEXT]:
-        ${textContext || "No text context. Analyze the visual multimodal input."}
+        [ADDITIONAL CONTEXT]:
+        ${textContext ? `Extracted Text: ${textContext}` : "Analyze multimodal visual input."}
+      ` : `
+        Analyze the provided medical content.
         
-        CRITICAL DIAGNOSTIC RULES:
-        1. Classify the document under "documentType".
-        2. In "findings", provide a deep surgical description (Morphology for images, Values for labs).
-        3. In "abnormalMarkers", list specific concerning features or lab outliers as an array.
-        4. In "implications", explain the clinical significance (e.g., "Highly suggestive of Molluscum contagiosum").
-        5. In "advice", provide **ALLOPATHIC** and **HOMEOPATHIC** standard protocols for review.
-        6. Return ONLY a raw JSON object string. NO MARKDOWN FENCES. 
+        [DOCUMENT CONTEXT]:
+        ${textContext || "Multimodal vision input."}
         
         REQUIRED JSON SCHEMA:
         {
@@ -58,6 +57,7 @@ export const callGeminiVision = async (fileBuffer, mimeType, basePrompt = "", te
           "advice": string,
           "riskLevel": "Low" | "Moderate" | "High" | "Critical"
         }
+        OUTPUT ONLY RAW JSON.
       `;
 
       const parts = [finalPrompt];
