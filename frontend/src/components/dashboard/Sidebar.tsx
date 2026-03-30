@@ -16,6 +16,8 @@ import {
   Activity
 } from "lucide-react";
 
+import { Logo } from "@/components/core/Logo";
+
 // Added all remaining tabs to the Sidebar structure for Phase 7
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
@@ -36,7 +38,7 @@ export function Sidebar() {
       {/* Branding Logo */}
       <Link href="/dashboard" className="mb-6 flex flex-col items-center gap-1 text-primary hover:scale-110 transition-transform group shrink-0 pointer-events-auto">
         <div className="w-[44px] h-[44px] rounded-full bg-surface-glass shadow-sm border border-border-glass flex items-center justify-center group-hover:bg-primary transition-colors">
-          <Activity size={20} strokeWidth={2.5} className="text-primary group-hover:text-white transition-colors" />
+          <Logo variant="icon" className="group-hover:text-white transition-colors" />
         </div>
       </Link>
 

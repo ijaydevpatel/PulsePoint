@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "biotrack — Neural Health Intelligence",
+  title: "PulsePo!nt — Neural Health Intelligence",
   description: "Modern AI healthcare platform",
 };
 

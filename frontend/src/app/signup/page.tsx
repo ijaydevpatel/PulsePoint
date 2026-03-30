@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Activity, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { apiClient } from "@/lib/api";
+import { Logo } from "@/components/core/Logo";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -53,8 +54,8 @@ export default function SignupPage() {
         className="w-full max-w-md p-10 rounded-[32px] bg-surface-glass backdrop-blur-3xl border border-border-glass shadow-float relative z-30"
       >
         <motion.div variants={itemVariants as any} className="flex flex-col items-center mb-8">
-          <Link href="/" className="mb-6 hover:scale-110 transition-transform">
-            <Activity size={48} strokeWidth={2.5} className="text-primary" />
+          <Link href="/" className="mb-6 hover:scale-110 transition-transform outline-none">
+            <Logo variant="icon" iconClassName="w-12 h-12" />
           </Link>
           <h1 className="text-3xl font-sans font-bold text-text-primary tracking-tight mb-2">Create Account</h1>
           <p className="text-sm font-medium text-text-secondary">Register to initialize your dashboard</p>

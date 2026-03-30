@@ -4,15 +4,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/core/ThemeProvider";
+import { Logo } from "@/components/core/Logo";
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme();
   return (
-    <header className="w-full flex items-center justify-between px-8 md:px-16 lg:px-24 py-8 z-50 relative">
-      <div className="flex items-center gap-[2px]">
-        <span className="text-2xl font-sans font-extrabold text-primary tracking-tight">Pulse</span>
-        <span className="text-2xl font-sans font-bold text-text-primary tracking-tight">Po!nt</span>
-      </div>
+    <header className="w-full absolute top-0 left-0 flex items-center justify-between px-8 md:px-16 lg:px-24 py-8 z-50">
+      <Link href="/" className="outline-none">
+        <Logo variant="primary" />
+      </Link>
       
       <nav className="hidden md:flex items-center gap-10">
         {/* Navigation items removed for clean minimal header */}

@@ -15,8 +15,7 @@ const ParticleField = ({ count = 300, theme = 'dark' }) => {
     // Theme-specific color mapping
     // Dark Mode: White and Burgundy
     // Light Mode: Soft Gray and Burgundy
-    const whiteColor = isDark ? '#FFFFFF' : '#A1A1AA'; 
-    const burgundyColor = isDark ? '#D11F4A' : '#8A1B33';
+    const burgundyColor = '#D92544';  
 
     for (let i = 0; i < count; i++) {
       const time = Math.random() * 100;
@@ -25,8 +24,7 @@ const ParticleField = ({ count = 300, theme = 'dark' }) => {
       const y = (Math.random() - 0.5) * 50;
       const z = (Math.random() - 0.5) * 20;
       
-      const isWarmWhite = Math.random() > 0.6;
-      const color = new THREE.Color(isWarmWhite ? whiteColor : burgundyColor);
+      const color = new THREE.Color(burgundyColor);
       
       temp.push({ time, factor, x, y, z, color });
     }
@@ -43,7 +41,8 @@ const ParticleField = ({ count = 300, theme = 'dark' }) => {
     if (context) {
         const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
         gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        gradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.8)');
+        gradient.addColorStop(0.2, 'rgba(255, 255, 255, 0.9)');
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
         context.fillStyle = gradient;
         context.fillRect(0, 0, 64, 64);
@@ -63,10 +62,8 @@ const ParticleField = ({ count = 300, theme = 'dark' }) => {
       dummy.position.set(px, py, pz);
       dummy.rotation.set(0, 0, 0);
       
-      const baseScale = Math.max(0.02, 0.15 + Math.sin(time) * 0.05);
-      const depthScale = baseScale * (1 + (pz / 20)); 
-      
-      dummy.scale.set(depthScale, depthScale, depthScale);
+      // Fixed small dot size 
+      dummy.scale.set(0.12, 0.12, 0.12);
       dummy.updateMatrix();
       
       if (mesh.current) {
@@ -85,16 +82,16 @@ const ParticleField = ({ count = 300, theme = 'dark' }) => {
 
   return (
     <>
-      <ambientLight intensity={theme === 'dark' ? 0.5 : 0.8} />
-      <pointLight ref={light} distance={40} intensity={theme === 'dark' ? 1 : 0.5} color={theme === 'dark' ? "#FFFFFF" : "#8A1B33"} />
+      <ambientLight intensity={0.5} />
+      <pointLight ref={light} distance={40} intensity={0.8} color="#D92544" />
       <instancedMesh ref={mesh} args={[undefined, undefined, count]}>
         <planeGeometry args={[1, 1]} />
         <meshBasicMaterial 
           map={particleTexture}
           transparent={true}
-          opacity={theme === 'dark' ? 0.4 : 0.25}
+          opacity={1}
           depthWrite={false}
-          blending={theme === 'dark' ? THREE.AdditiveBlending : THREE.NormalBlending}
+          blending={THREE.AdditiveBlending}
         />
       </instancedMesh>
     </>
@@ -118,7 +115,7 @@ export function GlobalParticles() {
         gl={{ antialias: true, alpha: true }}
         style={{ pointerEvents: 'none' }}
       >
-        <ParticleField count={450} theme={theme} />
+        <ParticleField count={315} theme={theme} />
       </Canvas>
     </div>
   );
