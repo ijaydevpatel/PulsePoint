@@ -16,10 +16,13 @@ import newsRoutes from './src/routes/newsRoutes.js';
 import notificationRoutes from './src/routes/notificationRoutes.js';
 import settingsRoutes from './src/routes/settingsRoutes.js';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Ensure robust environment loading via absolute path
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+
 
 const app = express();
 const PORT = process.env.PORT || 3001; // Standardized for User Environment Matching

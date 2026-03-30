@@ -9,6 +9,7 @@
     "dev": "nodemon --watch .env --watch src --ext js,json,env server.js"
   },
   "dependencies": {
+    "@clerk/backend": "^3.2.3",
     "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^2.4.3",
     "canvas": "^3.2.2",
@@ -23,7 +24,8 @@
     "nodemailer": "^8.0.4",
     "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.5.207",
-    "rss-parser": "^3.13.0"
+    "rss-parser": "^3.13.0",
+    "svix": "^1.89.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

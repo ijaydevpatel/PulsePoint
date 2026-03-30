@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAuth, useUser as useClerkUser } from "@clerk/nextjs";
 import { apiClient } from "@/lib/api";
 
 export interface UserProfile {
@@ -50,18 +51,19 @@ interface UserContextType {
   isAuthenticated: boolean;
   isProfileComplete: boolean;
   profile: UserProfile | null;
-  login: (token: string, profileCompleted: boolean, userData?: UserProfile) => void;
   logout: () => void;
   saveProfile: (data: UserProfile) => void;
+  // Legacy compatibility shim — keeps existing pages working
+  login: (token: string, profileCompleted: boolean, userData?: UserProfile) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isSignedIn, isLoaded, getToken, signOut } = useAuth();
+  const { user: clerkUser } = useClerkUser();
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   const sanitizeProfile = (p: any): UserProfile => ({
     ...p,
@@ -72,70 +74,50 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     healthScore: p.healthScore || 0,
     healthInsights: Array.isArray(p.healthInsights) ? p.healthInsights : [],
     intelligence: p.intelligence || null,
-    osint: p.osint || null
+    osint: p.osint || null,
   });
 
+  // Fetch PulsePoint profile when Clerk user is signed in
   useEffect(() => {
-    // Load state from strict localStorage keys
-    const authStatus = localStorage.getItem("pulsepoint-auth") === "true";
-    const savedProfileStr = localStorage.getItem("pulsepoint-profile");
+    if (!isLoaded || !isSignedIn) {
+      setProfile(null);
+      setIsProfileComplete(false);
+      return;
+    }
 
-    setIsAuthenticated(authStatus);
-
-    if (savedProfileStr) {
+    const fetchProfile = async () => {
       try {
-        const storedProfile = JSON.parse(savedProfileStr);
-        setProfile(sanitizeProfile(storedProfile));
-        setIsProfileComplete(true);
-      } catch (e) {
-        setIsProfileComplete(false);
-      }
-    }
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated && !profile) {
-      const fetchProfile = async () => {
-        try {
-          const data = await apiClient.get("/profile");
-          if (data && data.fullName) {
-             const sanitized = sanitizeProfile(data);
-             setProfile(sanitized);
-             setIsProfileComplete(true);
-             localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
-          }
-        } catch (error: any) {
-           if (error.status === 404 || error.message?.includes('404')) {
-             console.log("Profile Context Not Found (New User) - Handled gracefully.");
-           } else {
-             console.error("Dashboard Identity Sync Error:", error);
-           }
+        const token = await getToken();
+        if (token) {
+          localStorage.setItem("pulsepoint_token", token);
         }
-      };
-      fetchProfile();
-    }
-  }, [isAuthenticated, profile]);
 
-  const login = (token: string, profileCompleted: boolean, userData?: UserProfile) => {
-    localStorage.setItem("pulsepoint_token", token);
-    localStorage.setItem("pulsepoint-auth", "true");
-    setIsAuthenticated(true);
-    setIsProfileComplete(profileCompleted);
-    if (userData) {
-      const sanitized = sanitizeProfile(userData);
-      setProfile(sanitized);
-      localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
-    }
-  };
+        const data = await apiClient.get("/profile");
+        if (data && data.fullName) {
+          const sanitized = sanitizeProfile(data);
+          setProfile(sanitized);
+          setIsProfileComplete(true);
+          localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
+        }
+      } catch (error: any) {
+        if (error.status === 404 || error.message?.includes("404")) {
+          console.log("Profile not found (new user) — handled gracefully.");
+        } else {
+          console.error("Profile sync error:", error);
+        }
+      }
+    };
 
-  const logout = () => {
+    fetchProfile();
+  }, [isLoaded, isSignedIn, clerkUser?.id]);
+
+  const logout = async () => {
     localStorage.removeItem("pulsepoint_token");
     localStorage.removeItem("pulsepoint-auth");
     localStorage.removeItem("pulsepoint-profile");
-    setIsAuthenticated(false);
-    setIsProfileComplete(false);
     setProfile(null);
+    setIsProfileComplete(false);
+    await signOut();
   };
 
   const saveProfile = (data: UserProfile) => {
@@ -145,10 +127,31 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setIsProfileComplete(true);
   };
 
-  if (!mounted) return null; // Avoid hydration mismatch
+  // Legacy shim — kept for compatibility
+  const login = (_token: string, profileCompleted: boolean, userData?: UserProfile) => {
+    setIsProfileComplete(profileCompleted);
+    if (userData) {
+      const sanitized = sanitizeProfile(userData);
+      setProfile(sanitized);
+      localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
+    }
+  };
+
+  // IMPORTANT: Do NOT return null during loading — this unmounts the form tree
+  // and causes React state (input values) to reset, breaking the form UX.
+  // Instead always render children, even while Clerk is initializing.
 
   return (
-    <UserContext.Provider value={{ isAuthenticated, isProfileComplete, profile, login, logout, saveProfile }}>
+    <UserContext.Provider
+      value={{
+        isAuthenticated: isLoaded ? !!isSignedIn : false,
+        isProfileComplete,
+        profile,
+        logout,
+        saveProfile,
+        login,
+      }}
+    >
       {children}
     </UserContext.Provider>
   );

@@ -1,36 +1,81 @@
-import jwt from 'jsonwebtoken';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import User from '../models/User.js';
 
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
+const finalSecret = process.env.CLERK_SECRET_KEY;
+const finalPublish = process.env.CLERK_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+const clerkClient = createClerkClient({ 
+  secretKey: finalSecret,
+  publishableKey: finalPublish
+});
+
 const protect = async (req, res, next) => {
-  let token;
+  const authHeader = req.headers.authorization;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      // Extract specific token payload bypassing Bearer nomenclature
-      token = req.headers.authorization.split(' ')[1];
-
-      // Decode validation
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Mutate the local request appending strict isolated backend execution tracking removing the raw password map 
-      req.user = await User.findById(decoded.userId).select('-password');
-
-      if (!req.user) {
-        return res.status(401).json({ status: 'error', message: 'Not authorized, user no longer exists.' });
-      }
-
-      next();
-    } catch (error) {
-      console.error('[AuthMiddleware] Verification Error:', error.message);
-      return res.status(401).json({ status: 'error', message: 'Not authorized, active token failure' });
-    }
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ status: 'error', message: 'Not authorized — no token provided.' });
   }
 
-  if (!token) {
-    return res.status(401).json({ status: 'error', message: 'Not authorized, explicit payload routing failure (No Token Detected)' });
+  const token = authHeader.split(' ')[1];
+
+  try {
+    // Verify the Clerk JWT session token using standalone verifyToken function as required by v3.x
+    const payload = await verifyToken(token, {
+      secretKey: finalSecret,
+      publishableKey: finalPublish
+    });
+    const clerkUserId = payload.sub;
+
+    // Find or auto-create the local PulsePoint user record linked to Clerk
+    let user = await User.findOne({ clerkId: clerkUserId });
+
+    if (!user) {
+      // Lazy-create a linked user on first authenticated API call
+      // Because clerkClient uses finalSecret, this will never throw a missing key error
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const email = clerkUser.emailAddresses?.[0]?.emailAddress || '';
+
+      // Check if user already exists by email (e.g. they completely swapped Clerk instances/keys)
+      user = await User.findOne({ email });
+
+      if (user) {
+        // Seamlessly reconnect their old local MongoDB schema to their new Clerk ID!
+        user.clerkId = clerkUserId;
+        await user.save();
+      } else {
+        user = await User.create({
+          clerkId: clerkUserId,
+          email,
+          profileCompleted: false,
+        });
+
+        // Auto-create empty Profile for this new user
+        try {
+          const ProfileModel = (await import('../models/Profile.js')).default;
+          await ProfileModel.create({
+            user: user._id,
+            emergencyContact: { name: '', phone: '', relation: '' }
+          });
+        } catch (profileErr) {
+          // Profile may already exist — ignore duplicate key errors
+          if (profileErr.code !== 11000) console.error('[Auth] Profile init error:', profileErr.message);
+        }
+      }
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('[AuthMiddleware] Clerk Token/Client Error:', error.message);
+    return res.status(401).json({ status: 'error', message: `Token Verification Failed: ${error.message}` });
   }
 };
 
