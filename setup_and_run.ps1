@@ -1,8 +1,8 @@
-# PulsePoint: Automated Setup & Launch Script
+# PulsePo!int: Automated Setup & Launch Script
 # This script installs all dependencies, ensures MongoDB is running, and starts both backend and frontend.
 
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-Write-Host "   PulsePo!nt: Neural Health Intelligence System   " -ForegroundColor Cyan
+Write-Host "   PulsePo!int: Neural Health Intelligence System   " -ForegroundColor Cyan
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
 
 # 1. Environment Check
@@ -66,5 +66,5 @@ Write-Host "[4/4] DEPLOYMENT COMPLETE" -ForegroundColor Cyan
 Write-Host "      Backend: http://localhost:3001" -ForegroundColor Gray
 Write-Host "      Frontend: http://localhost:3000" -ForegroundColor Gray
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-Write-Host "PulsePo!nt is now running in separate windows." -ForegroundColor Green
+Write-Host "PulsePo!int is now running in separate windows." -ForegroundColor Green
 pause

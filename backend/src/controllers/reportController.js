@@ -14,7 +14,7 @@ export const analyzeReport = async (req, res) => {
 
     // ── Surgical Diagnostic Pipeline ─────────────────────────────────────────
     const clinicalPrompt = `
-      You are PulsePoint's Cognitive Diagnostic Engine (powered by Gemini 1.5 Pro).
+      You are PulsePo!int's Cognitive Diagnostic Engine (powered by Gemini 1.5 Pro).
       Analyze the provided content for:
       Patient context: Age ${profile?.age || 'Unknown'}, Gender: ${profile?.gender || 'Unknown'}
 

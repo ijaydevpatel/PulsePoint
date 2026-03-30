@@ -74,13 +74,13 @@ export default function SettingsPage() {
       profile,
       settings,
       exportDate: new Date().toISOString(),
-      platform: "PulsePo!nt v1.3"
+      platform: "PulsePo!int v1.3"
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `PulsePo!nt_Neural_Archive_${profile?.fullName?.replace(/\s+/g, '_') || 'User'}.json`;
+    link.download = `PulsePo!int_Neural_Archive_${profile?.fullName?.replace(/\s+/g, '_') || 'User'}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

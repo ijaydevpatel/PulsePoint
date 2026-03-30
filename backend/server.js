@@ -65,7 +65,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
-    message: 'PulsePoint API Central Logic Node Active',
+    message: 'PulsePo!int API Central Logic Node Active',
     timestamp: new Date().toISOString(),
     db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
@@ -102,7 +102,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('✅ MongoDB Database connected.');
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 PulsePoint API Engine running on http://0.0.0.0:${PORT}`);
+      console.log(`🚀 PulsePo!int API Engine running on http://0.0.0.0:${PORT}`);
     });
   })
   .catch((err) => {

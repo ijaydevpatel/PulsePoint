@@ -34,7 +34,7 @@ export const sendMessage = async (req, res) => {
     session.messages.push({ role: 'user', content: message });
     await session.save();
 
-    const systemInstruction = `You are PulsePo!nt's Cognitive Diagnostic Partner—a helpful, friendly health guide for non-medical users. 
+    const systemInstruction = `You are PulsePo!int's Cognitive Diagnostic Partner—a helpful, friendly health guide for non-medical users. 
 Talking to: ${profile.fullName}.
 CRITICAL CONVERSATIONAL RULES:
 ${isFirstResponse ? '1. ALWAYS start your response with a unique, interesting, and relatable health fact or physiological insight.\n2. Follow the fact with a warm greeting.' : '1. Provide a warm, brief greeting and skip the initial health fact.'}
@@ -95,7 +95,7 @@ export const streamMessage = async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    const systemInstruction = `You are PulsePo!nt's Cognitive Diagnostic Partner—a helpful, friendly health guide for non-medical users. 
+    const systemInstruction = `You are PulsePo!int's Cognitive Diagnostic Partner—a helpful, friendly health guide for non-medical users. 
 Talking to: ${profile?.fullName || 'User'}.
 CRITICAL CONVERSATIONAL RULES:
 ${isFirstResponse ? '1. ALWAYS start your response with a unique, interesting, and relatable health fact or physiological insight.\n2. Follow the fact with a warm greeting.' : '1. Provide a warm, brief greeting and skip the health fact.'}

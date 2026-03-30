@@ -1,7 +1,7 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const getToken = (): string | null =>
-  typeof window !== 'undefined' ? localStorage.getItem('pulsepoint_token') : null;
+  typeof window !== 'undefined' ? localStorage.getItem('pulsepo!int_token') : null;
 
 export const apiClient = {
 

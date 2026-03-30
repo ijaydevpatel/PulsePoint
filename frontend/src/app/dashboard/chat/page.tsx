@@ -16,7 +16,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: "Hello! I am PulsePo!nt's AI Diagnostic Engine. Based on your current profile parameters and the elevated vitals recorded today, how are you feeling?"
+      content: "Hello! I am PulsePo!int's AI Diagnostic Engine. Based on your current profile parameters and the elevated vitals recorded today, how are you feeling?"
     }
   ]);
    const [sessionId, setSessionId] = useState<string | null>(null);

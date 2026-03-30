@@ -77,7 +77,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     osint: p.osint || null,
   });
 
-  // Fetch PulsePoint profile when Clerk user is signed in
+  // Fetch PulsePo!int profile when Clerk user is signed in
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
       setProfile(null);
@@ -89,7 +89,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const token = await getToken();
         if (token) {
-          localStorage.setItem("pulsepoint_token", token);
+          localStorage.setItem("pulsepo!int_token", token);
         }
 
         const data = await apiClient.get("/profile");
@@ -97,7 +97,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           const sanitized = sanitizeProfile(data);
           setProfile(sanitized);
           setIsProfileComplete(true);
-          localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
+          localStorage.setItem("pulsepo!int-profile", JSON.stringify(sanitized));
         }
       } catch (error: any) {
         if (error.status === 404 || error.message?.includes("404")) {
@@ -112,9 +112,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   }, [isLoaded, isSignedIn, clerkUser?.id]);
 
   const logout = async () => {
-    localStorage.removeItem("pulsepoint_token");
-    localStorage.removeItem("pulsepoint-auth");
-    localStorage.removeItem("pulsepoint-profile");
+    localStorage.removeItem("pulsepo!int_token");
+    localStorage.removeItem("pulsepo!int-auth");
+    localStorage.removeItem("pulsepo!int-profile");
     setProfile(null);
     setIsProfileComplete(false);
     await signOut();
@@ -122,7 +122,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   const saveProfile = (data: UserProfile) => {
     const sanitized = sanitizeProfile(data);
-    localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
+    localStorage.setItem("pulsepo!int-profile", JSON.stringify(sanitized));
     setProfile(sanitized);
     setIsProfileComplete(true);
   };
@@ -133,7 +133,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     if (userData) {
       const sanitized = sanitizeProfile(userData);
       setProfile(sanitized);
-      localStorage.setItem("pulsepoint-profile", JSON.stringify(sanitized));
+      localStorage.setItem("pulsepo!int-profile", JSON.stringify(sanitized));
     }
   };
 

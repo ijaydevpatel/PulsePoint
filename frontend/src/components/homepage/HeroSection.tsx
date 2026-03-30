@@ -73,7 +73,7 @@ export function HeroSection() {
             transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
             className="text-lg md:text-xl text-text-secondary max-w-lg font-medium leading-relaxed"
           >
-            PulsePoint helps you track, understand, and act on your bloodwork — 
+            PulsePo!int helps you track, understand, and act on your bloodwork — 
             with smart AI insights and clean dashboards.
           </motion.p>
           

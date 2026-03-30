@@ -1,7 +1,7 @@
 {
   "name": "pulsepoint-backend",
   "version": "1.0.0",
-  "description": "REST API and AI Orchestration Layer for PulsePoint",
+  "description": "REST API and AI Orchestration Layer for PulsePo!int",
   "main": "server.js",
   "type": "module",
   "scripts": {

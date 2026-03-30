@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 const pdfParse = require('pdf-parse');
 
 /**
- * PulsePoint Document Processor
+ * PulsePo!int Document Processor
  * Routes to local Fast-Extraction or Cloud High-Fidelity Gemini
  */
 export const extractDocumentContent = async (fileBuffer, mimeType) => {

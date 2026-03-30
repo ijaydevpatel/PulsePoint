@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "PulsePo!nt — Neural Health Intelligence",
+  title: "PulsePo!int — Neural Health Intelligence",
   description: "Modern AI healthcare platform",
 };
 

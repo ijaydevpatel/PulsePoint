@@ -34,7 +34,7 @@ const protect = async (req, res, next) => {
     });
     const clerkUserId = payload.sub;
 
-    // Find or auto-create the local PulsePoint user record linked to Clerk
+    // Find or auto-create the local PulsePo!int user record linked to Clerk
     let user = await User.findOne({ clerkId: clerkUserId });
 
     if (!user) {

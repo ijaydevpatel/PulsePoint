@@ -7,7 +7,7 @@ import { FeaturesSection } from "@/components/homepage/FeaturesSection";
 import { DataVisSection } from "@/components/homepage/DataVisSection";
 import { HowItWorksSection } from "@/components/homepage/HowItWorksSection";
 import { IntelligenceSection } from "@/components/homepage/IntelligenceSection";
-import { PulsePointIntelligence } from "@/components/homepage/PulsePointIntelligence";
+import { PulsePoIntIntelligence } from "@/components/homepage/PulsePoIntIntelligence";
 
 // Seamless gradient bridge between sections — creates a single-page feel
 function SectionFade({ from = "transparent", to = "transparent" }: { from?: string; to?: string }) {
@@ -28,7 +28,7 @@ export default function Home() {
         <Navbar />
 
         {/* Section 1: Intelligence Hero */}
-        <PulsePointIntelligence />
+        <PulsePoIntIntelligence />
 
         {/* Section 2: Features */}
         <FeaturesSection />
@@ -47,7 +47,7 @@ export default function Home() {
         
         {/* Footer */}
         <footer className="w-full py-6 text-center bg-surface-low/50">
-           <p className="text-text-secondary text-sm font-sans font-medium italic opacity-70">© 2026 <span className="text-[#D92544]">Pulse</span>Po<span className="text-[#D92544]">!</span>nt. All rights reserved.</p>
+           <p className="text-text-secondary text-sm font-sans font-medium italic opacity-70">© 2026 <span className="text-[#D92544]">Pulse</span>Po<span className="text-[#D92544]">!</span>int. All rights reserved.</p>
         </footer>
       </div>
     </SmoothScroll>

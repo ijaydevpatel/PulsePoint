@@ -1,4 +1,4 @@
-# PulsePoint Backend — Setup & Run Guide
+# PulsePo!int Backend — Setup & Run Guide
 
 ## Prerequisites
 - **Node.js** v18+ 
@@ -7,7 +7,7 @@
 ## Quick Start
 ```bash
 # 1. Navigate to backend directory
-cd PulsePoint/backend
+cd PulsePo!int/backend
 
 # 2. Install dependencies
 npm install
@@ -21,7 +21,7 @@ npm run dev
 ```
 
 ## AI Infrastructure
-PulsePoint uses a standardized cloud-only neural architecture:
+PulsePo!int uses a standardized cloud-only neural architecture:
 
 | Feature | Engine | Model ID |
 |---|---|---|

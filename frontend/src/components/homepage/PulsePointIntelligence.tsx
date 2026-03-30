@@ -7,7 +7,7 @@ import { Ubuntu } from "next/font/google";
 
 const ubuntuFont = Ubuntu({ subsets: ["latin"], weight: ["700"] });
 
-export function PulsePointIntelligence() {
+export function PulsePoIntIntelligence() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -107,7 +107,7 @@ export function PulsePointIntelligence() {
           </div>
 
           <p className="text-sm md:text-base text-text-primary font-medium leading-relaxed">
-            <span className="text-[#D92544] font-bold block mb-1">AI-Powered Subcutaneous Scan</span> Understand your biology like never before with <span className="text-[#D92544]">Pulse</span>Po<span className="text-[#D92544]">!</span>nt's neural ecosystem.
+            <span className="text-[#D92544] font-bold block mb-1">AI-Powered Subcutaneous Scan</span> Understand your biology like never before with <span className="text-[#D92544]">Pulse</span>Po<span className="text-[#D92544]">!</span>int's neural ecosystem.
           </p>
         </motion.div>
 
