@@ -112,7 +112,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Heartbeat: Automatic token refresh every 50 seconds to prevent expiry
     const heartbeat = setInterval(async () => {
-      if (isLoaded \u0026\u0026 isSignedIn) {
+      if (isLoaded && isSignedIn) {
         const token = await getToken();
         if (token) {
           localStorage.setItem("pulsepo!int_token", token);
