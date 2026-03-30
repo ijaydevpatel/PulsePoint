@@ -14,22 +14,30 @@ export const analyzeReport = async (req, res) => {
 
     // ── Surgical Diagnostic Pipeline ─────────────────────────────────────────
     const clinicalPrompt = `
-      You are PulsePo!int's Cognitive Diagnostic Engine (powered by Gemini 1.5 Pro).
-      Analyze the provided content for:
-      Patient context: Age ${profile?.age || 'Unknown'}, Gender: ${profile?.gender || 'Unknown'}
+      You are PulsePo!int's Cognitive Diagnostic Engine (Surgical Precision Mode).
+      Analyze the provided medical content.
+      
+      [EXTERNAL CONTEXT (Account Holder)]:
+      User Age: ${profile?.age || 'Unknown'}, Gender: ${profile?.gender || 'Unknown'}
+
+      [CRITICAL IDENTITY RULES]:
+      - ALWAYS prioritize the Name, Age, and Gender written on the document itself.
+      - If the document belongs to a different person (e.g., family member), use the document's details.
+      - Only use the External Context if the document is missing these identifiers.
 
       Output a precise clinical analysis in STRICT JSON format:
       {
-        "documentType": "Classify (e.g. 'Blood Panel', 'Skin Morphology', 'Prescription')",
+        "documentType": "Classify document clearly",
+        "patientIdentity": "Extract Name, Age, Gender from document",
         "findings": "A high-fidelity paragraph describing all clinical data.",
         "abnormalMarkers": ["List every abnormal value or concerning visual find"],
-        "implications": "Clinical significance of these finding for the patient.",
+        "implications": "Clinical significance for THIS specific patient.",
         "advice": "Next steps: Allopathy, Homeopathy, and Urgency level.",
         "riskLevel": "Low | Moderate | High | Critical"
       }
 
       RULES:
-      - Be direct. Use surgical precision. 
+      - Be direct. Use surgical clinical language. 
       - Quote exact lab values where relevant.
       - Output ONLY the JSON object. No pre-amble.
     `;
