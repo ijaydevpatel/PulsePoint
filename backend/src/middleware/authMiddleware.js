@@ -31,7 +31,7 @@ const protect = async (req, res, next) => {
     const payload = await verifyToken(token, {
       secretKey: finalSecret,
       publishableKey: finalPublish,
-      leeway: 60
+      leeway: 300
     });
     const clerkUserId = payload.sub;
 
