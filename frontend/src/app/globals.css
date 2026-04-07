@@ -2,21 +2,26 @@
 
 @theme {
   --font-sans: var(--font-inter);
+  --font-display: var(--font-epilogue);
 
   /* Soft White / Light Neutral Base */
   --color-background-app: #FAFAFA;
   --color-surface-low: #F5F5F7;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low: #F0F0F2;
   --color-surface-container: #EAEAEA;
-  --color-surface-container-high: #DFDFDF;
+  --color-surface-container-high: #E2E2E2;
+  --color-surface-container-highest: #DCDCDC;
   
   /* Glassmorphism Tokens */
   --color-surface-glass: rgba(255, 255, 255, 0.5);
   --color-border-glass: rgba(255, 255, 255, 0.4);
   
-  /* Burgundy / Soft Red highlights */
+  /* Burgundy / Soft Red highlights (The Identity) */
   --color-primary: #8A1B33;
   --color-primary-hover: #701529;
   --color-primary-glow: #D92544;
+  --color-accent-crimson: #D11F4A;
   --color-accent-warm: #FFD4D5;
   
   --color-text-primary: #1A1A1A;
@@ -38,8 +43,11 @@
   [data-theme="dark"] {
     --color-background-app: #050505;
     --color-surface-low: #0A0A0B;
+    --color-surface-container-lowest: #020202;
+    --color-surface-container-low: #0D0D0E;
     --color-surface-container: #121214;
     --color-surface-container-high: #1C1C1F;
+    --color-surface-container-highest: #28282B;
     
     --color-surface-glass: rgba(18, 18, 20, 0.6);
     --color-border-glass: rgba(255, 255, 255, 0.08);
@@ -63,6 +71,11 @@
     transition: background-color 0.3s ease, color 0.3s ease;
     overflow-x: hidden;
   }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
 @layer utilities {
@@ -71,10 +84,20 @@
     backdrop-filter: blur(24px);
     border: 1px solid var(--color-border-glass);
   }
+  
+  /* Tonal Depth Logic (The "No-Line" Rule) */
+  .depth-low { background-color: var(--color-surface-container-low); }
+  .depth-base { background-color: var(--color-surface-container); }
+  .depth-high { background-color: var(--color-surface-container-high); }
+  .depth-highest { background-color: var(--color-surface-container-highest); }
+
   .shadow-soft {
     box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
   }
   .shadow-float {
     box-shadow: 0 20px 50px -15px rgba(138, 27, 51, 0.08);
+  }
+  .shadow-glow {
+    box-shadow: 0 0 40px rgba(138, 27, 51, 0.15);
   }
 }

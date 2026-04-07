@@ -1,26 +1,35 @@
+"use client";
 import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { Sparkles, ArrowRight } from "lucide-react";
+import { useTheme } from "@/components/core/ThemeProvider";
 
-function ECGLine() {
+function ECGLine({ isDark }: { isDark: boolean }) {
+  const primaryColor = isDark ? "#FF4D6D" : "#D92544";
+  const secondaryColor = isDark ? "#C9184A" : "#8A1B33";
+
   return (
-    <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none scale-[1.3] md:scale-[1.8] right-[-15%] opacity-90">
-      <svg width="800" height="400" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <div 
+      className={`absolute inset-0 z-0 flex items-center justify-center pointer-events-none scale-[1.1] sm:scale-[1.3] md:scale-[1.8] right-[-5%] md:right-[-15%] ${isDark ? 'opacity-100' : 'opacity-80'} md:opacity-60`}
+      style={{
+        WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 25%)',
+        maskImage: 'linear-gradient(to right, transparent 0%, black 25%)'
+      }}
+    >
+      <svg width="600" height="300" viewBox="0 0 800 400" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto">
         <defs>
           <filter id="ecgGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feGaussianBlur stdDeviation={isDark ? "10" : "8"} result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
-          <linearGradient id="ecgGradient" x1="100%" y1="0%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor="#8A1B33" stopOpacity="0" />
-            <stop offset="20%" stopColor="#8A1B33" stopOpacity="0.1" />
-            <stop offset="50%" stopColor="#8A1B33" stopOpacity="1" />
-            <stop offset="80%" stopColor="#D92544" stopOpacity="0.8" />
-            <stop offset="100%" stopColor="#D92544" stopOpacity="0" />
+          <linearGradient id="ecgGradient" gradientUnits="userSpaceOnUse" x1="800" y1="200" x2="0" y2="200">
+            <stop offset="0%" stopColor={secondaryColor} />
+            <stop offset="30%" stopColor={secondaryColor} />
+            <stop offset="100%" stopColor={primaryColor} />
           </linearGradient>
         </defs>
         
-        {/* Main glowing heartbeat path drawing from Right to Left */}
         <motion.path
           d="M800 200 L600 200 L580 200 L550 150 L510 300 L460 50 L410 350 L370 180 L340 200 L100 200 L0 200"
           stroke="url(#ecgGradient)"
@@ -28,21 +37,22 @@ function ECGLine() {
           strokeLinecap="round"
           strokeLinejoin="round"
           filter="url(#ecgGlow)"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
           transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, repeatType: "loop" }}
+          style={{ opacity: 1 }}
         />
         
-        {/* Sharp inner core line */}
         <motion.path
           d="M800 200 L600 200 L580 200 L550 150 L510 300 L460 50 L410 350 L370 180 L340 200 L100 200 L0 200"
-          stroke="#ffffff"
-          strokeWidth="1.5"
+          stroke={isDark ? "#ffffff" : "#ffffff"}
+          strokeWidth="1"
           strokeLinecap="round"
           strokeLinejoin="round"
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 0.6 }}
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1, opacity: isDark ? 0.7 : 0.4 }}
           transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, repeatType: "loop", delay: 0.05 }}
+          style={{ opacity: isDark ? 0.7 : 0.4 }}
         />
       </svg>
     </div>
@@ -50,89 +60,94 @@ function ECGLine() {
 }
 
 export function HeroSection() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
-    <section className="relative w-full min-h-[80vh] flex items-center pt-24 pb-16 px-8 md:px-16 lg:px-24 overflow-hidden">
-      <div className="flex flex-col md:flex-row items-center justify-between w-full h-full relative z-10 gap-16">
+    <section className="relative w-full min-h-[auto] flex items-center pt-0 md:pt-20 pb-12 md:pb-16 px-6 md:px-16 lg:px-24 overflow-hidden bg-background-app">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between w-full h-full relative z-10 gap-12 md:gap-20">
         
         {/* Left Column: Typography */}
-        <div className="w-full md:w-1/2 flex flex-col justify-center gap-6">
-{/* Client badge removed for minimal aesthetic per final instructions */}
-
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
+        <div className="w-full md:w-[55%] flex flex-col justify-center gap-6 md:gap-8 text-center md:text-left">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="text-6xl md:text-8xl font-sans font-bold text-text-primary tracking-tight leading-[1.1]"
+            transition={{ duration: 0.6 }}
           >
-             Your Health Data, Decoded by AI
-          </motion.h1>
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] md:text-xs font-black uppercase tracking-[0.25em] mb-6 md:mb-8">
+              <Sparkles size={14} strokeWidth={2.5} /> Next-Gen Clinical Intelligence
+            </span>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-9xl font-display font-black text-text-primary tracking-tighter leading-[0.95]">
+              Health Data, <br/>
+              <span className="text-primary italic">Decoded</span> by AI.
+            </h1>
+          </motion.div>
           
           <motion.p 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-            className="text-lg md:text-xl text-text-secondary max-w-lg font-medium leading-relaxed"
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-base sm:text-lg md:text-xl lg:text-2xl text-text-secondary max-w-xl mx-auto md:mx-0 font-semibold leading-relaxed opacity-80"
           >
-            PulsePo!int helps you track, understand, and act on your bloodwork — 
-            with smart AI insights and clean dashboards.
+            PulsePo<span className="text-primary">!</span>nt maps your biological signatures into actionable clinical intelligence—powered by the Neural Twin engine.
           </motion.p>
           
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
-            className="mt-6 flex flex-wrap items-center gap-4"
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mt-4 md:mt-8 flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 md:gap-6"
           >
-            <Link href="/login" className="px-8 py-3.5 bg-surface-glass border border-border-glass rounded-full font-bold text-text-primary shadow-sm hover:shadow-soft hover:border-primary/20 transition-all text-center min-w-[140px]">
-              Login
+            <Link href="/signup" className="w-full sm:w-auto px-10 py-5 bg-primary text-white rounded-[24px] font-black shadow-glow hover:brightness-110 active:scale-95 transition-all text-center text-sm md:text-base uppercase tracking-widest flex items-center justify-center gap-2">
+              Sync Neural Twin <ArrowRight size={18} strokeWidth={3} />
             </Link>
-            <Link href="/signup" className="px-8 py-3.5 bg-primary text-white rounded-full font-bold shadow-float hover:shadow-lg hover:-translate-y-0.5 transition-all text-center min-w-[140px]">
-              Sign Up
+            <Link href="/login" className="w-full sm:w-auto px-10 py-5 bg-surface-low/50 backdrop-blur-3xl border border-surface-container rounded-[24px] font-black text-text-primary hover:bg-surface-low transition-all text-center text-sm md:text-base uppercase tracking-widest">
+              Identity Portal
             </Link>
           </motion.div>
         </div>
 
-        {/* Right Column: 2D Composition Container with Flowing ECG & Floating Cards */}
-        <div className="w-full md:w-1/2 min-h-[500px] flex items-center justify-center relative">
+        {/* Right Column: Visual Composition */}
+        <div className="w-full md:w-[45%] min-h-[350px] sm:min-h-[500px] flex items-center justify-center relative mt-8 md:mt-0">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, ease: "easeOut", delay: 0.3 }}
-            className="w-full aspect-square max-w-[500px] relative flex items-center justify-center"
+            className="w-full aspect-square relative flex items-center justify-center"
           >
             
-            {/* Elegant ECG Line flowing from the right replacing abstract orb */}
-            <ECGLine />
+            {/* Elegant ECG Line */}
+            <ECGLine isDark={isDark} />
 
-            {/* Floating Glass Panels simulating the Dribbble video (Kept exactly as requested) */}
+            {/* Floating Glass Panels */}
             <motion.div 
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute top-[10%] left-[-10%] glass px-6 py-4 rounded-3xl shadow-lg border border-border-glass min-w-[180px] z-20"
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute top-[10%] left-[-5%] md:left-[-15%] bg-surface-low/40 backdrop-blur-3xl p-6 md:p-8 rounded-[32px] md:rounded-[40px] shadow-2xl border border-surface-container min-w-[180px] md:min-w-[220px] z-20 group hover:border-primary/30 transition-colors"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-primary/20 flex items-center justify-center">
-                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-4 h-4 bg-primary/20 rounded-full flex items-center justify-center">
+                   <div className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-glow"></div>
                 </div>
-                <span className="text-xs text-text-secondary uppercase tracking-wider font-semibold">Biomarker Analysis</span>
+                <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] opacity-60">Biometrics</span>
               </div>
-              <p className="font-bold text-lg text-text-primary">Real-time</p>
-              <p className="text-sm text-text-secondary">data insights</p>
+              <p className="font-display font-black text-xl md:text-2xl text-text-primary leading-tight">Neural Sync</p>
+              <p className="text-[11px] font-semibold text-text-secondary mt-1 uppercase tracking-widest">Optimized</p>
             </motion.div>
 
             <motion.div 
-              animate={{ y: [0, 15, 0] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="absolute bottom-[15%] right-[-5%] glass px-6 py-5 rounded-3xl shadow-lg border border-border-glass min-w-[200px] z-20"
+              animate={{ y: [0, 20, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              className="absolute bottom-[10%] right-[-5%] md:right-[-10%] bg-surface-low/40 backdrop-blur-3xl p-6 md:p-8 rounded-[32px] md:rounded-[40px] shadow-2xl border border-surface-container min-w-[200px] md:min-w-[240px] z-20 group hover:border-primary/30 transition-colors"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-3 h-3 rounded-full bg-primary/20 flex items-center justify-center">
-                   <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-4 h-4 bg-primary/20 rounded-full flex items-center justify-center">
+                   <div className="w-2 h-2 bg-primary rounded-full shadow-glow"></div>
                 </div>
-                <span className="text-xs text-text-secondary uppercase tracking-wider font-semibold">Health Dashboard</span>
+                <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] opacity-60">Engine Status</span>
               </div>
-              <p className="font-bold text-xl text-text-primary">Track</p>
-              <p className="text-sm text-text-secondary mt-1">trends with<br/>confidence.</p>
+              <p className="font-display font-black text-xl md:text-2xl text-text-primary leading-tight">Clinical Pulse</p>
+              <p className="text-[11px] font-semibold text-text-secondary mt-1 uppercase tracking-widest leading-relaxed">Active Signal Detected</p>
             </motion.div>
 
           </motion.div>

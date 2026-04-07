@@ -6,11 +6,11 @@ import User from '../models/User.js';
 // @access  Private
 export const getSettings = async (req, res) => {
   try {
-    let settings = await Settings.findOne({ user: req.user._id });
+    let settings = await Settings.findOne({ user: req.auth.userId });
     
     // Auto-create default settings if none exist
     if (!settings) {
-      settings = await Settings.create({ user: req.user._id });
+      settings = await Settings.create({ user: req.auth.userId });
     }
 
     res.json(settings);
@@ -24,13 +24,13 @@ export const getSettings = async (req, res) => {
 // @access  Private
 export const updateSettings = async (req, res) => {
   try {
-    let settings = await Settings.findOne({ user: req.user._id });
+    let settings = await Settings.findOne({ user: req.auth.userId });
     
     if (!settings) {
-      settings = await Settings.create({ user: req.user._id, ...req.body });
+      settings = await Settings.create({ user: req.auth.userId, ...req.body });
     } else {
       settings = await Settings.findOneAndUpdate(
-        { user: req.user._id },
+        { user: req.auth.userId },
         req.body,
         { new: true }
       );

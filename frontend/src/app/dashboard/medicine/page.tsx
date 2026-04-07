@@ -1,428 +1,264 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
-import { Pill, Activity, AlertTriangle, GitCompare, CheckCircle2 } from "lucide-react";
-
+import React, { useState } from "react";
+import { FeatureShell } from "@/components/dashboard/FeatureShell";
+import { Pill, Search, ShieldCheck, AlertCircle, Info, ChevronRight } from "lucide-react";
 import { apiClient } from "@/lib/api";
-
-const RiskGauge = ({ percentage, riskLevel, mode = "toxicology" }: { percentage: number, riskLevel: string, mode?: "toxicology" | "interference" }) => {
-  const color = mode === "interference" 
-    ? (percentage < 30 ? "#22d3ee" : percentage < 70 ? "#818cf8" : "#c084fc") // Cyan -> Indigo -> Violet
-    : (percentage < 30 ? "#3b82f6" : percentage < 70 ? "#8b5cf6" : "#ef4444"); // Blue -> Purple -> Red
-
-  const radius = 110;
-  const cx = 150;
-  const cy = 140;
-  const circumference = Math.PI * radius;
-
-  const motionPercentage = useMotionValue(0);
-  
-  useEffect(() => {
-    animate(motionPercentage, percentage || 0, { duration: 1.5, ease: "easeOut" });
-  }, [percentage, motionPercentage]);
-
-  const knobX = useTransform(motionPercentage, (v) => cx + radius * Math.cos(Math.PI - (v / 100) * Math.PI));
-  const knobY = useTransform(motionPercentage, (v) => cy - radius * Math.sin(Math.PI - (v / 100) * Math.PI));
-  const strokeDashoffset = useTransform(motionPercentage, (v) => circumference - (v / 100) * circumference);
-  const roundedPercentage = useTransform(motionPercentage, (v) => Math.round(v));
-
-  return (
-    <div className="relative w-full h-[220px] flex items-center justify-center pt-8 select-none">
-      <svg viewBox="0 0 300 160" className="w-[80%] max-w-[300px] drop-shadow-xl overflow-visible">
-        <defs>
-          <filter id="knobGlow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="4" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-        </defs>
-
-        <path 
-          d={`M ${cx - radius},${cy} A ${radius} ${radius} 0 0 1 ${cx + radius},${cy}`} 
-          fill="none" 
-          stroke="var(--color-surface-container-high)" 
-          strokeWidth="20" 
-          strokeLinecap="round" 
-        />
-
-        <motion.path 
-          d={`M ${cx - radius},${cy} A ${radius} ${radius} 0 0 1 ${cx + radius},${cy}`} 
-          fill="none" 
-          stroke={color} 
-          strokeWidth="16.5" 
-          strokeLinecap="round" 
-          strokeDasharray={circumference}
-          style={{ strokeDashoffset }}
-        />
-
-        <motion.circle 
-          style={{ cx: knobX, cy: knobY }}
-          r="8" 
-          fill={color} 
-          stroke="var(--color-surface-glass)" 
-          strokeWidth="4" 
-          filter="url(#knobGlow)"
-        />
-        
-        <motion.circle 
-          style={{ cx: knobX, cy: knobY }}
-          r="2.5" 
-          fill="white" 
-        />
-      </svg>
-      
-      <div className="absolute inset-x-0 bottom-6 flex flex-col items-center justify-center pointer-events-none">
-        <motion.span 
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="text-5xl font-black tracking-tighter leading-none text-text-primary" 
-        >
-          <motion.span>{roundedPercentage}</motion.span>%
-        </motion.span>
-        <span className="text-[12px] font-bold uppercase tracking-[0.2em] opacity-60 mt-2" style={{ color }}>
-          {riskLevel || "Risk Index"}
-        </span>
-        {mode === "interference" && (
-           <div className="mt-4 px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-full">
-             <p className="text-[9px] font-black text-blue-400 uppercase tracking-tighter">Physical Risk: 0%</p>
-           </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const MEDICINE_PHASES = [
-  "Parsing pharmaceutical agents...",
-  "Cross-referencing drug database...",
-  "Mapping metabolic pathways...",
-  "Analyzing enzyme inhibition...",
-  "Calculating interaction index...",
-  "Generating risk profile...",
-];
-
-const safeFormatItem = (item: any): string => {
-  if (typeof item === 'string') return item;
-  if (item && typeof item === 'object') {
-    if (item.name) return `${safeFormatItem(item.name)}${item.role ? ` (${item.role})` : ''}${item.dosage ? ` [${item.dosage}]` : ''}`;
-    if (item.description) return item.description;
-    if (item.text) return item.text;
-    if (item.step) return item.step;
-    const keys = Object.keys(item);
-    if (keys.length > 0 && typeof item[keys[0]] === 'string') {
-      return Object.values(item).filter(v => typeof v === 'string').join(": ");
-    }
-    return "Clinical Detail";
-  }
-  return String(item);
-};
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function MedicinePage() {
-  const [med1, setMed1] = useState("");
-  const [med2, setMed2] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [hasResult, setHasResult] = useState(false);
-  const [resultData, setResultData] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingPhase, setLoadingPhase] = useState(0);
+  const [primary, setPrimary] = useState("");
+  const [secondary, setSecondary] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [neuralPulse, setNeuralPulse] = useState<any>(null);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!isAnalyzing) { setLoadingPhase(0); return; }
-    const interval = setInterval(() => setLoadingPhase(p => (p + 1) % MEDICINE_PHASES.length), 2000);
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
+  const handleCheck = async () => {
+    if (!primary || !secondary) {
+      setError("Both pharmaceutical agents are required for collision analysis.");
+      return;
+    }
 
-  const handleAnalyze = async () => {
-    setIsAnalyzing(true);
-    setError(null);
-    setHasResult(false);
-    setResultData(null);
+    setLoading(true);
+    setError("");
+    setResult(null);
+
     try {
-      const data = await apiClient.post('/medicine/check', {
-        primaryMedicine: med1,
-        secondaryMedicine: med2
+      const data = await apiClient.post("/medicine/check", {
+        primaryMedicine: primary,
+        secondaryMedicine: secondary,
       });
-      const riskMap: Record<string, number> = { "Low": 15, "Moderate": 45, "High": 82, "Critical": 100 };
-      setResultData({
-        ...data,
-        riskPercentage: riskMap[data.riskLevel] || 0
-      });
-      setHasResult(true);
+      setResult(data);
+      setNeuralPulse(data.neuralPulse);
     } catch (err: any) {
-      setError(err.message || "Compatibility check failed");
-      setHasResult(false);
+      setError(err.message || "Collision engine synchronization failed.");
     } finally {
-      setIsAnalyzing(false);
+      setLoading(false);
     }
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full flex flex-col pt-4 px-6 pb-6 absolute inset-0">
-      <div className="flex flex-col mb-6 mt-2 z-20 shrink-0">
-        <h1 className="text-3xl font-sans font-black text-text-primary tracking-tight">Medicine Compatibility Engine</h1>
-        <p className="text-text-secondary mt-1 font-medium">Test multi-agent pharmacological interactions against your physiological baseline.</p>
-      </div>
-
-      <div className="flex-1 w-full flex flex-col lg:flex-row gap-6 z-20 overflow-y-auto hide-scrollbar">
+    <FeatureShell 
+      title="Medicine Interaction" 
+      subtitle="Neural Collision Matrix" 
+      icon={<Pill size={24} />}
+      neuralPulse={neuralPulse}
+    >
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 h-full">
         
-        <div className="flex-1 flex flex-col gap-6">
-           <div className="bg-surface-glass backdrop-blur-3xl border border-border-glass shadow-sm rounded-[32px] p-6 flex flex-col min-h-[400px]">
-              <h3 className="text-lg font-bold text-text-primary mb-6 flex items-center gap-2"><GitCompare size={18} className="text-primary"/> Define Agents</h3>
-              
-              <div className="flex flex-col gap-3 flex-1 lg:mt-6">
-                 <div className="relative z-10 flex flex-col bg-surface-low px-5 py-4 rounded-2xl border border-surface-container shadow-sm">
-                    <label className="text-xs font-black uppercase text-text-primary tracking-widest mb-2 block">Primary Medicine</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Aspirin, 500mg" 
-                      value={med1}
-                      onChange={(e) => setMed1(e.target.value)}
-                      className="w-full bg-surface-low border border-surface-container-high rounded-xl py-3 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-shadow" 
-                    />
-                 </div>
-
-                 <div className="relative z-10 flex flex-col bg-surface-low px-5 py-4 rounded-2xl border border-surface-container shadow-sm">
-                    <label className="text-xs font-black uppercase text-text-primary tracking-widest mb-2 block">Secondary Medicine</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Warfarin, 5mg" 
-                      value={med2}
-                      onChange={(e) => setMed2(e.target.value)}
-                      className="w-full bg-surface-low border border-surface-container-high rounded-xl py-3 px-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] transition-shadow" 
-                    />
-                 </div>
+        {/* Left: Input Panel */}
+        <div className="xl:col-span-5 flex flex-col gap-6">
+          <div className="bg-surface-glass backdrop-blur-3xl rounded-[32px] border border-border-glass p-8 shadow-sm flex flex-col gap-6">
+            <h3 className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mb-2 opacity-80">
+              Agent Synchronization
+            </h3>
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-bold text-text-secondary ml-1">Primary Agent</label>
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary transition-colors" size={18} />
+                <input 
+                  value={primary}
+                  onChange={(e) => setPrimary(e.target.value)}
+                  placeholder="e.g. Lisinopril"
+                  className="w-full bg-surface-low/50 border border-border-glass rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all text-text-primary"
+                />
               </div>
-           </div>
+            </div>
 
-           <button 
-             onClick={handleAnalyze}
-             disabled={isAnalyzing || !med1 || !med2}
-             className="w-full py-4 bg-primary text-white rounded-[24px] font-black shadow-md hover:bg-primary-hover hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 text-lg"
-           >
-             {isAnalyzing ? (
-               <span className="flex items-center gap-2">
-                 <Activity size={20} className="animate-spin" />
-                 <AnimatePresence mode="wait">
-                   <motion.span key={loadingPhase} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.3 }}>
-                     {MEDICINE_PHASES[loadingPhase]}
-                   </motion.span>
-                 </AnimatePresence>
-               </span>
-             ) : "Analyze Collision"}
-           </button>
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-bold text-text-secondary ml-1">Secondary Agent</label>
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary transition-colors" size={18} />
+                <input 
+                  value={secondary}
+                  onChange={(e) => setSecondary(e.target.value)}
+                  placeholder="e.g. Ibuprofen"
+                  className="w-full bg-surface-low/50 border border-border-glass rounded-2xl py-4 pl-12 pr-4 text-sm font-bold focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all text-text-primary"
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-3 p-4 bg-accent-crimson/5 border border-accent-crimson/10 rounded-2xl text-[11px] font-bold text-accent-crimson animate-shake">
+                <AlertCircle size={14} />
+                {error}
+              </div>
+            )}
+
+            <button 
+              onClick={handleCheck}
+              disabled={loading}
+              className="w-full bg-primary text-white py-5 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-glow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-2"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>Run Collision Check <ShieldCheck size={18} /></>
+              )}
+            </button>
+          </div>
+
+          {/* Guidelines Box */}
+          <div className="p-6 rounded-[28px] bg-primary/5 border border-primary/10 flex gap-4">
+             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+               <Info size={18} />
+             </div>
+             <p className="text-[11px] font-semibold text-text-secondary leading-relaxed">
+               Neural matrix identifies potential biochemical interference by analyzing hepatic and renal excretion pathways. 
+               Always consult a professional for critical clinical decisions.
+             </p>
+          </div>
         </div>
 
-        <div className="flex-1 flex flex-col h-full min-h-[500px]">
+        {/* Right: Results Panel */}
+        <div className="xl:col-span-7 h-full min-h-[400px]">
           <AnimatePresence mode="wait">
-            {error ? (
-              <motion.div key="error" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full bg-surface-glass border border-red-500/20 shadow-inner rounded-[32px] flex items-center justify-center p-8 text-center flex-col opacity-90 backdrop-blur-xl">
-                 <AlertTriangle size={48} className="text-red-500 mb-4" />
-                 <h3 className="font-bold text-lg text-text-primary">Collision Engine Fault</h3>
-                 <p className="text-sm text-text-secondary max-w-sm mt-2">{error}</p>
-                 <button onClick={() => { setError(null); setHasResult(false); }} className="mt-6 px-6 py-2 bg-red-500/10 text-red-500 font-bold rounded-lg hover:bg-red-500/20 transition-colors">Dismiss</button>
-              </motion.div>
-            ) : !hasResult ? (
-              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full bg-surface-low border border-surface-container shadow-inner rounded-[32px] flex items-center justify-center p-8 text-center flex-col opacity-70">
-                 <Pill size={48} className="text-text-secondary/30 mb-4" />
-                 <h3 className="font-bold text-lg text-text-primary">Awaiting Agents</h3>
-                 <p className="text-sm text-text-secondary max-w-sm mt-2">Enter two distinct pharmaceutical agents to visualize physiological hazard predictions.</p>
+            {!result ? (
+              <motion.div 
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full bg-surface-low/20 border border-dashed border-border-glass rounded-[40px] flex flex-col items-center justify-center text-center p-12"
+              >
+                <div className="w-20 h-20 rounded-full bg-surface-low flex items-center justify-center mb-6 text-text-secondary/20">
+                  <Pill size={40} />
+                </div>
+                <h4 className="text-sm font-black text-text-primary uppercase tracking-[0.2em] mb-2">Awaiting Synchronization</h4>
+                <p className="text-xs font-semibold text-text-secondary/60 max-w-xs">Enter two pharmaceutical markers to begin biological interference analysis.</p>
               </motion.div>
             ) : (
-              <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full h-full bg-surface-glass backdrop-blur-3xl border border-border-glass shadow-md rounded-[32px] flex flex-col overflow-y-auto hide-scrollbar p-6">
-                 
-                  <div className={`flex flex-col items-center justify-center p-12 ${resultData?.isHomeopathic ? 'bg-blue-600/5 border-blue-600/20' : resultData?.dangerDetected ? 'bg-accent-crimson/5 border-accent-crimson/20' : 'bg-green-600/5 border-green-600/20'} border rounded-[40px] mb-8 relative overflow-visible min-h-[300px]`}>
-                    <RiskGauge 
-                      riskLevel={resultData?.riskLevel || "Low"} 
-                      percentage={resultData?.isHomeopathic ? (resultData?.interferenceScore || 0) : (resultData?.riskPercentage || 0)} 
-                      mode={resultData?.isHomeopathic ? "interference" : "toxicology"}
-                    />
-                    
-                    <div className="flex flex-col items-center text-center mt-6">
-                       <h2 className={`text-3xl font-black ${resultData?.isHomeopathic ? 'text-blue-400' : resultData?.dangerDetected ? 'text-accent-crimson' : 'text-green-600'} uppercase tracking-tight`}>
-                         {resultData?.isHomeopathic ? 'Therapeutic' : resultData?.riskLevel} {resultData?.isHomeopathic ? 'Interference' : 'RISK PROFILE'}
-                       </h2>
-                       <p className="text-sm font-bold text-text-primary mt-2 opacity-80 uppercase tracking-widest">
-                         {resultData?.isHomeopathic ? 'Homeopathic Synergy Alert' : resultData?.compatibilityVerdict}
+              <motion.div 
+                key="result"
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="h-full flex flex-col gap-6"
+              >
+                {/* Result Card */}
+                <div className="bg-surface-glass backdrop-blur-3xl rounded-[40px] border border-border-glass p-10 shadow-float overflow-hidden relative group">
+                  
+                  {/* Status Banner */}
+                  <div className={`absolute top-0 right-0 px-8 py-3 rounded-bl-[24px] text-[10px] font-black uppercase tracking-widest text-white ${result.riskLevel === 'Low' ? 'bg-green-600' : 'bg-accent-crimson'}`}>
+                    Risk: {result.riskLevel}
+                  </div>
+
+                  <div className="flex items-center gap-6 mb-10">
+                    <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center shadow-lg ${result.dangerDetected ? 'bg-accent-crimson/10 text-accent-crimson' : 'bg-green-600/10 text-green-600'}`}>
+                      {result.dangerDetected ? <AlertCircle size={32} /> : <ShieldCheck size={32} />}
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-display font-black text-text-primary tracking-tight leading-none mb-2">
+                        {result.compatibilityVerdict}
+                      </h3>
+                      <p className="text-[10px] font-black text-text-secondary tracking-[0.05em] leading-relaxed max-w-xl">{result.interactionCause}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                    <div className="space-y-4">
+                       <h5 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                         Clinical Rationale
+                       </h5>
+                       <p className="text-sm font-semibold text-text-secondary leading-relaxed">
+                         {result.explanation}
+                       </p>
+                    </div>
+                    <div className="space-y-4">
+                       <h5 className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-2">
+                         <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                         Clinical Advice
+                       </h5>
+                       <p className="text-sm font-semibold text-text-secondary leading-relaxed">
+                         {result.patientAdvice}
                        </p>
                     </div>
                   </div>
 
-                 <div className="flex flex-col gap-6">
-
-                      {resultData?.interactionCause && (
-                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-3xl p-6 shadow-sm shadow-amber-500/5">
-                          <div className="flex items-center gap-3 mb-4">
-                             <div className="bg-amber-500/20 p-2 rounded-xl">
-                               <AlertTriangle size={20} className="text-amber-400"/>
-                             </div>
+                  <div className="p-6 rounded-[24px] bg-surface-low/50 border border-border-glass">
+                    <div className="flex justify-between items-center mb-4">
+                       <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Molecular Profile</span>
+                       <span className="text-[10px] font-black text-primary uppercase tracking-widest">{result.metabolicPathway}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       <div className="p-5 rounded-2xl bg-surface-glass border border-border-glass">
+                          <div className="text-[9px] font-black mb-2 opacity-40 uppercase tracking-widest">Marker A: Primary Agent</div>
+                          <div className="text-sm font-black text-text-primary mb-4">{result.techIngredients1.active}</div>
+                          
+                          <div className="grid grid-cols-1 gap-3 pt-3 border-t border-border-glass/50">
                              <div>
-                               <h4 className="font-bold text-amber-400 text-base leading-tight">Critical Risk Analysis</h4>
-                               <p className="text-amber-400/60 text-xs font-medium uppercase tracking-widest mt-0.5">Primary Risk Ingredients</p>
+                                <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Binders & Excipients</span>
+                                <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1.inactive?.binders || "Standard Matrix"}</p>
+                             </div>
+                             <div className="flex gap-4">
+                                <div className="flex-1">
+                                   <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Coating</span>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1.inactive?.coatings || "None"}</p>
+                                </div>
+                                <div className="flex-1">
+                                   <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Additives</span>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1.inactive?.additives || "None"}</p>
+                                </div>
                              </div>
                           </div>
-                          <div className="text-sm text-text-secondary leading-relaxed font-medium bg-black/20 p-4 rounded-2xl border border-white/5">
-                            {typeof resultData.interactionCause === 'string' ? resultData.interactionCause : safeFormatItem(resultData.interactionCause)}
+                       </div>
+
+                       <div className="p-5 rounded-2xl bg-surface-glass border border-border-glass">
+                          <div className="text-[9px] font-black mb-2 opacity-40 uppercase tracking-widest">Marker B: Secondary Agent</div>
+                          <div className="text-sm font-black text-text-primary mb-4">{result.techIngredients2.active}</div>
+                          
+                          <div className="grid grid-cols-1 gap-3 pt-3 border-t border-border-glass/50">
+                             <div>
+                                <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Binders & Excipients</span>
+                                <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2.inactive?.binders || "Standard Matrix"}</p>
+                             </div>
+                             <div className="flex gap-4">
+                                <div className="flex-1">
+                                   <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Coating</span>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2.inactive?.coatings || "None"}</p>
+                                </div>
+                                <div className="flex-1">
+                                   <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Additives</span>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2.inactive?.additives || "None"}</p>
+                                </div>
+                             </div>
                           </div>
-                        </div>
-                      )}
+                       </div>
+                    </div>
+                  </div>
+                </div>
 
-                      <div className="mt-2">
-                        <h4 className="font-bold text-text-primary mb-2 text-sm uppercase tracking-wider">
-                          {resultData?.isHomeopathic ? 'Vital Force Dynamics' : 'Metabolic Reaction Profile'}
-                        </h4>
-                        <div className="text-sm text-text-secondary leading-relaxed bg-surface-low p-4 rounded-xl border border-surface-container">
-                          {typeof resultData?.explanation === 'string' ? (
-                            <p>{resultData.explanation}</p>
-                          ) : Array.isArray(resultData?.explanation) ? (
-                            <ul className="list-decimal pl-4 space-y-2">
-                              {resultData.explanation.map((step: any, idx: number) => (
-                                <li key={idx} className="marker:text-primary/50">
-                                  {safeFormatItem(step)}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>{resultData?.explanation ? safeFormatItem(resultData.explanation) : "Awaiting neural explanation."}</p>
-                          )}
-                        </div>
+                {/* Alternatives */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="bg-surface-glass backdrop-blur-3xl border border-border-glass rounded-[28px] p-6">
+                      <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-4">Safe Synergy Alt</h4>
+                      <div className="flex flex-col gap-2">
+                        {result.safeAlternatives.map((alt: string) => (
+                           <div key={alt} className="flex items-center justify-between p-3 rounded-xl bg-green-600/5 text-green-600 border border-green-600/10 text-[11px] font-bold">
+                               {alt}
+                           </div>
+                        ))}
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-surface-low border border-surface-container rounded-2xl p-5 shadow-sm">
-                          <h5 className="text-[10px] uppercase font-black tracking-widest text-text-secondary mb-4 flex items-center gap-2">
-                             <div className="w-1 h-3 bg-primary rounded-full" />
-                             Technical Analysis: {med1}
-                          </h5>
-                          
-                          <div className="space-y-4">
-                            <div>
-                              <p className="text-[11px] font-black text-primary uppercase tracking-tight mb-1">Active Ingredient</p>
-                              <p className="text-xs text-text-primary leading-relaxed font-semibold">
-                                {resultData?.techIngredients1?.active || "Generic APIs detected as primary components."}
-                              </p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-surface-container/50">
-                               <div>
-                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Fillers/Binders</p>
-                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
-                                   {resultData?.techIngredients1?.inactive?.binders || "Typical pharmaceutical excipients."}
-                                 </p>
-                               </div>
-                               <div>
-                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Coatings/Glazing</p>
-                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
-                                   {resultData?.techIngredients1?.inactive?.coatings || "Standard protective shielding."}
-                                 </p>
-                               </div>
-                               <div>
-                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Additives/Colorants</p>
-                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
-                                   {resultData?.techIngredients1?.inactive?.additives || "Trace essential additives."}
-                                 </p>
-                               </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-surface-low border border-surface-container rounded-2xl p-5 shadow-sm">
-                          <h5 className="text-[10px] uppercase font-black tracking-widest text-text-secondary mb-4 flex items-center gap-2">
-                             <div className="w-1 h-3 bg-primary rounded-full" />
-                             Technical Analysis: {med2}
-                          </h5>
-                          
-                          <div className="space-y-4">
-                            <div>
-                              <p className="text-[11px] font-black text-primary uppercase tracking-tight mb-1">Active Ingredient</p>
-                              <p className="text-xs text-text-primary leading-relaxed font-semibold">
-                                {resultData?.techIngredients2?.active || "Generic APIs detected as primary components."}
-                              </p>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-surface-container/50">
-                               <div>
-                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Fillers/Binders</p>
-                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
-                                   {resultData?.techIngredients2?.inactive?.binders || "Typical pharmaceutical excipients."}
-                                 </p>
-                               </div>
-                               <div>
-                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Coatings/Glazing</p>
-                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
-                                   {resultData?.techIngredients2?.inactive?.coatings || "Standard protective shielding."}
-                                 </p>
-                               </div>
-                               <div>
-                                 <p className="text-[10px] font-bold text-text-secondary uppercase mb-1">Additives/Colorants</p>
-                                 <p className="text-[11px] text-text-primary/80 leading-relaxed font-medium">
-                                   {resultData?.techIngredients2?.inactive?.additives || "Trace essential additives."}
-                                 </p>
-                               </div>
-                            </div>
-                          </div>
-                        </div>
+                   </div>
+                   <div className="bg-surface-glass backdrop-blur-3xl border border-border-glass rounded-[28px] p-6">
+                      <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-4">Critical Markers</h4>
+                      <div className="flex flex-col gap-2">
+                        {result.warnings.map((warn: string) => (
+                           <div key={warn} className="flex items-center gap-3 p-3 rounded-xl bg-orange-600/5 text-orange-600 border border-orange-600/10 text-[11px] font-bold">
+                              <AlertCircle size={14} />
+                              {warn}
+                           </div>
+                        ))}
                       </div>
-
-                      <div className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 shadow-sm shadow-blue-500/5 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                           <Activity size={120} className="text-blue-400" />
-                        </div>
-                        <h4 className="flex items-center gap-2 font-bold text-blue-400 text-sm mb-4 relative z-10"><CheckCircle2 size={16}/> Clinical Deep-Dive & Advice</h4>
-                        
-                        <div className="flex flex-col gap-5 relative z-10">
-                          {resultData?.metabolicPathway && (
-                            <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                              <span className="text-[10px] font-black text-blue-400/60 block mb-1.5 uppercase tracking-widest">
-                                {resultData?.isHomeopathic ? "Energetic Interference Level" : "Metabolic Logistics"}
-                              </span>
-                              <p className="text-xs text-text-secondary leading-relaxed font-medium">{resultData.metabolicPathway}</p>
-                            </div>
-                          )}
-                          
-                          {resultData?.clinicalSeverityNote && (
-                            <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                              <span className="text-[10px] font-black text-blue-400/60 block mb-1.5 uppercase tracking-widest">Clinical Logic</span>
-                              <p className="text-xs text-text-secondary leading-relaxed font-medium">{resultData.clinicalSeverityNote}</p>
-                            </div>
-                          )}
-                          
-                          {resultData?.patientAdvice && (
-                            <div className="p-4 bg-primary/15 border border-primary/30 rounded-2xl shadow-inner shadow-primary/5">
-                              <p className="text-xs font-black text-primary flex items-start gap-2">
-                                <span className="bg-primary text-white text-[10px] px-1.5 py-0.5 rounded-md mt-0.5 shadow-sm">ACTION</span>
-                                {resultData.patientAdvice}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="bg-surface-low border border-surface-container rounded-2xl p-6 shadow-sm">
-                        <h4 className="flex items-center gap-2 font-bold text-text-primary text-sm mb-4 uppercase tracking-widest"><div className="w-1.5 h-4 bg-primary rounded-full" /> Safer Alternatives & Warnings</h4>
-                        <ul className="text-sm font-medium text-text-secondary list-none flex flex-col gap-3">
-                           {(Array.isArray(resultData?.safeAlternatives) ? resultData.safeAlternatives : []).map((alt: any, i: number) => (
-                             <li key={`alt-${i}`} className="flex items-start gap-3 bg-surface-container/30 p-3 rounded-xl border border-surface-container">
-                               <CheckCircle2 size={14} className="text-green-500 mt-0.5 shrink-0" />
-                               <span className="text-xs leading-relaxed">{safeFormatItem(alt)}</span>
-                             </li>
-                           ))}
-                           {(Array.isArray(resultData?.warnings) ? resultData.warnings : []).map((warn: any, i: number) => (
-                             <li key={`warn-${i}`} className="flex items-start gap-3 bg-rose-500/5 p-3 rounded-xl border border-rose-500/20">
-                               <AlertTriangle size={14} className="text-rose-500 mt-0.5 shrink-0" />
-                               <span className="text-xs leading-relaxed text-rose-300 font-bold">{safeFormatItem(warn)}</span>
-                             </li>
-                           ))}
-                        </ul>
-                      </div>
-                 </div>
-
+                   </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-
       </div>
-    </motion.div>
+    </FeatureShell>
   );
 }

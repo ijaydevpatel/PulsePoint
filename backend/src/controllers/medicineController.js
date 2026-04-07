@@ -1,4 +1,4 @@
-import { executeModelChain } from '../model-router/orchestrator.js';
+import { generateGroqIntelligence } from '../ai-services/groqService.js';
 import Profile from '../models/Profile.js';
 
 // Hardcoded Medical Contraindication Database
@@ -25,11 +25,11 @@ export const checkMedicineCompatibility = async (req, res) => {
       return res.status(400).json({ message: 'Input Fault: Requires Dual Medicine String Maps.' });
     }
 
-    let profile = await Profile.findOne({ user: req.user._id });
+    let profile = await Profile.findOne({ user: req.auth.userId });
     
     // Resilient Fallback: Use standard metrics if profile is missing to ensure stability
     if (!profile) {
-      console.warn(`[DiagnosticEngine] Profile missing for user ${req.user._id}. Using Guest Baseline.`);
+      console.warn(`[DiagnosticEngine] Profile missing for user ${req.auth.userId}. Using Guest Baseline.`);
       profile = {
         age: 30,
         weight: 75,
@@ -68,19 +68,25 @@ export const checkMedicineCompatibility = async (req, res) => {
     ];
     const randomTheme = themes[Math.floor(Date.now() / 60000) % themes.length];
 
-    const systemInstruction = `You are a Senior Research Clinical Pharmacist and Homeopathic Materia Medica Consultant. 
+    const systemInstruction = `You are a Senior Research Clinical Pharmacist (PULSEPO!NT PHARMACORE ENGINE). 
 You MUST respond with ONLY a valid JSON object. 
+Strictly utilize the Research model ID: qwen/qwen3-32b.
+
+LANGUAGE & TONE RULES (MANDATORY):
+- Use EXACTLY 50% medical clinical language and 50% simple normal language for everything else.
+- EXPLANATION: The "explanation" MUST BE A LONG, DETAILED PARAGRAPH (minimum 6-8 sentences).
+- INTERACTION CAUSE: The "interactionCause" MUST BE A LONG DETAILED PARAGRAPH (minimum 4-6 sentences).
 
 MODALITY GATING:
-- ALLOPATHIC: Use research-grade toxicology (CYP450 isoenzymes, NAPQI, hepatocyte metabolism). Physical Risk is REAL.
-- HOMEOPATHIC: Use Materia Medica logic (Vital Force, Miasmic layers, Antidoting). Physical Risk is 0% (Dilution >12C).
+- ALLOPATHIC: Use research-grade toxicology (CYP450 isoenzymes, NAPQI, hepatocyte metabolism).
+- HOMEOPATHIC: Use Materia Medica logic (Vital Force, Miasmic layers).
 
 STRICT CLINICAL INTELLIGENCE REQUIREMENTS:
 1. TECHNICAL LABEL DECOMPOSITION (Mandatory): 
    - ALLOPATHIC: Perform a DailyMed-standard audit. Extract Active APIs + Specific Binders (e.g. Croscarmellose), Coatings (e.g. Hypromellose), and Additives (e.g. Polysorbate 80). NO 'N/A'.
    - HOMEOPATHIC: Base substance + Potency + Vehicle (Lactose/Alcohol).
-2. MEDICAL TERMINOLOGY: Use serious, valid clinical terms. Avoid overly simple language. 
-3. EXPLANATION: 6-8 sentence exhaustive deep-dive. Use the analogy based on ${randomTheme}.
+2. MEDICAL TERMINOLOGY: Use serious, valid clinical terms. 
+3. EXPLANATION: 6-8 sentence exhaustive deep-dive with the ${randomTheme} analogy.
 4. INTERACTION CAUSE: Specific biochemical/energetic mechanism. Min 4 sentences.
 
 JSON SCHEMA:
@@ -95,17 +101,17 @@ JSON SCHEMA:
     "active": "Full Active Ingredient + Dosage",
     "inactive": { "binders": "Specific pharmaceutical binders", "coatings": "Coating agents", "additives": "Colorants/Preservatives" }
   },
-  "interactionCause": "Pharmacological Collision Logic (Allopathy) OR Energetic Antidoting Logic (Homeopathy).",
-  "metabolicPathway": "Specific enzyme/pathway (Allopathy) OR Vital Force/Interference Level (Homeopathy).",
+  "interactionCause": "Pharmacological Collision Logic (Allopathy). Detailed paragraph.",
+  "metabolicPathway": "Specific enzyme/pathway.",
   "clinicalSeverityNote": "Mechanism-based risk analysis.",
-  "interferenceScore": 0-100 (for Homeopathy),
-  "riskPercentage": 0-100 (Physical risk, MUST be 0 for Homeopathy),
+  "interferenceScore": 0-100,
+  "riskPercentage": 0-100,
   "detectedRisk": "Low | Medium | High | Critical",
   "patientAdvice": "Exhaustive clinical advice.",
   "safeAlternatives": ["Clinical Alternative 1", "Clinical Alternative 2"],
   "warnings": ["Clinical Warning 1", "Clinical Warning 2"]
 }
-NO MARKDOWN. Return JSON ONLY.`;
+Respond with JSON ONLY. Utilitize Research model: qwen/qwen3-32b.`;
 
     const promptText = `TECHNICAL LABEL AUDIT:
 Agent A: ${med1}
@@ -116,57 +122,58 @@ Patient: ${profile.age}yo, ${profile.weight}kg.
 Extract full technical ingredients (Active + Inactive decomposition) and analyze. Return JSON only.`;
 
     let parsedResponse = {};
+    let neuralPulse = null;
+    
     try {
-      // Use Qwen-32B as the primary research engine for deep label extraction
-      const rawAiResponse = await executeModelChain('MEDICINE_EXPLANATION', promptText, systemInstruction, { 
-        temperature: 0.1,
-        model: 'qwen/qwen3-32b' 
-      });
+      console.log(`[MedicineController] Syncing with Groq Qwen-3 Research Engine...`);
+      const { text, generationTime, model } = await generateGroqIntelligence(promptText, systemInstruction);
+      neuralPulse = { generationTime, model };
       
-      console.log(`[MedicineController] Raw Research Output (Partial): ${rawAiResponse.substring(0, 300)}...`);
+      console.log(`[MedicineController] Raw Intelligence Pulse Received. Length: ${text?.length || 0}`);
+      
+      // 3. FUZZY JSON PARSER: Strip tags, backticks, and noise
+      let cleaned = text || "";
+      
+      // Remove <think> tags or reasoning text
+      cleaned = cleaned.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '');
+      
+      // Clean markdown and prefix text
+      cleaned = cleaned.replace(/```json/g, '').replace(/```/g, '').trim();
+      const jsonStart = cleaned.indexOf('{');
+      const jsonEnd = cleaned.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+      }
 
       try {
-        let cleaned = rawAiResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-        const startIdx = cleaned.indexOf('{');
-        const endIdx = cleaned.lastIndexOf('}');
-        if (startIdx !== -1 && endIdx !== -1) {
-          const jsonStr = cleaned.substring(startIdx, endIdx + 1);
-          parsedResponse = JSON.parse(jsonStr);
-
-          // AGGRESSIVE SANITIZATION: Clear markdown from values
-          const cleanObj = (obj) => {
-            if (typeof obj === 'string') return obj.replace(/\*\*|\*/g, '').trim();
-            if (Array.isArray(obj)) return obj.map(cleanObj);
-            if (typeof obj === 'object' && obj !== null) {
-              const newObj = {};
-              for (const key in obj) newObj[key] = cleanObj(obj[key]);
-              return newObj;
-            }
-            return obj;
-          };
-          parsedResponse = cleanObj(parsedResponse);
-        } else {
-          throw new Error('No JSON found');
-        }
+        parsedResponse = JSON.parse(cleaned);
       } catch (parseErr) {
-        console.error('[MedicineController] JSON Parsing Failure:', parseErr);
-        parsedResponse = {
-          explanation: `Analysis simplified. Risk is ${hardcodedRiskLevel}.`,
-          techIngredients1: { active: med1, inactive: { binders: "N/A", coatings: "N/A", additives: "N/A" } },
-          techIngredients2: { active: med2, inactive: { binders: "N/A", coatings: "N/A", additives: "N/A" } },
-          detectedRisk: hardcodedRiskLevel,
-          safeAlternatives: ["Consult a physician"],
-          warnings: ["Technical data limited"]
-        };
+        console.warn('[MedicineController] Native Parse Failed, attempting manual cleanup...');
+        let heavilyCleaned = cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+        parsedResponse = JSON.parse(heavilyCleaned);
       }
+      
+      // 4. AGGRESSIVE SANITIZATION: Clear markdown from values
+      const cleanObj = (obj) => {
+        if (typeof obj === 'string') return obj.replace(/\*\*|\*/g, '').trim();
+        if (Array.isArray(obj)) return obj.map(cleanObj);
+        if (typeof obj === 'object' && obj !== null) {
+          const newObj = {};
+          for (const key in obj) newObj[key] = cleanObj(obj[key]);
+          return newObj;
+        }
+        return obj;
+      };
+      parsedResponse = cleanObj(parsedResponse);
+
     } catch (llmErr) {
-      console.error('[MedicineController] AI Inference Failure:', llmErr);
+      console.error('[MedicineController] AI Inference failure:', llmErr);
       parsedResponse = {
         detectedRisk: hardcodedRiskLevel,
-        explanation: `Analysis is currently limited. Baseline risk is ${hardcodedRiskLevel}.`,
+        explanation: `Intelligence analysis briefly paused. Baseline risk is ${hardcodedRiskLevel}.`,
         techIngredients1: { active: med1, inactive: { binders: "N/A", coatings: "N/A", additives: "N/A" } },
         techIngredients2: { active: med2, inactive: { binders: "N/A", coatings: "N/A", additives: "N/A" } },
-        safeAlternatives: ["Consult health professional"]
+        safeAlternatives: ["Consult clinician"]
       };
     }
 
@@ -192,16 +199,17 @@ Extract full technical ingredients (Active + Inactive decomposition) and analyze
     const finalPercentage = isHomeo ? 0 : (percentageMap[finalRisk] || 10);
     const finalInterference = isHomeo ? (parsedResponse.interferenceScore || percentageMap[finalRisk] || 10) : 0;
 
-    res.json({
-       compatibilityVerdict: finalVerdict,
-       riskLevel: finalRisk,
-       riskPercentage: finalPercentage,
-       interferenceScore: finalInterference,
-       isHomeopathic: isHomeo,
-       dangerDetected: !isHomeo && (finalRisk === "High" || finalRisk === "Critical"),
-       conflictFlags: isContraindicated ? ["Direct Database Match"] : [],
-       ...parsedResponse
-    });
+     res.json({
+        compatibilityVerdict: finalVerdict,
+        riskLevel: finalRisk,
+        riskPercentage: finalPercentage,
+        interferenceScore: finalInterference,
+        isHomeopathic: isHomeo,
+        dangerDetected: !isHomeo && (finalRisk === "High" || finalRisk === "Critical"),
+        conflictFlags: isContraindicated ? ["Direct Database Match"] : [],
+        neuralPulse,
+        ...parsedResponse
+     });
 
   } catch (error) {
     console.error('[MedicineController] Framework Fault:', error.stack);

@@ -1,111 +1,87 @@
+import 'dotenv/config'; // Crucial: must be highest priority due to ES Module hoisting
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import authRoutes from './src/routes/authRoutes.js';
-import profileRoutes from './src/routes/profileRoutes.js';
+// Imports API Routes
+import profileRoutes from './src/routes/profile.js';
+import dashboardRoutes from './src/routes/dashboard.js';
+import reportRoutes from './src/routes/reports.js';
 import symptomRoutes from './src/routes/symptomRoutes.js';
 import medicineRoutes from './src/routes/medicineRoutes.js';
-import dashboardRoutes from './src/routes/dashboardRoutes.js';
 import chatRoutes from './src/routes/chatRoutes.js';
-import reportRoutes from './src/routes/reportRoutes.js';
 import newsRoutes from './src/routes/newsRoutes.js';
-import notificationRoutes from './src/routes/notificationRoutes.js';
-import settingsRoutes from './src/routes/settingsRoutes.js';
+import diagnosticRoutes from './src/routes/diag.js'; // Helper for legacy SSE if needed
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure robust environment loading via absolute path
-dotenv.config({ path: path.join(__dirname, '.env') });
-
-
-
 const app = express();
-const PORT = process.env.PORT || 3001; // Standardized for User Environment Matching
+const PORT = process.env.PORT || 3001;
 
-// Middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
+// Production CORS Strategy: Neural Identity Handshake
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:3002',
+  'http://localhost:3000', 
   'http://127.0.0.1:3000',
-  'http://127.0.0.1:3001',
-  'http://127.0.0.1:3002',
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl) or allowed domains
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`[CORS] Rejected origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      console.warn(`[CORS Blocked]: Attempted pulse from unauthorized domain: ${origin}`);
+      callback(new Error('CORS identity mismatch'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization'],
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.options('*', cors()); // Handle preflight for all routes
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Health Check
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    message: 'PulsePo!int API Central Logic Node Active',
-    timestamp: new Date().toISOString(),
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-  });
-});
-
-// Route Mounts
-app.use('/api/auth', authRoutes);
-app.use('/api/profile', profileRoutes);
+// Clinical API Layer Routing - Specific features first to prevent shadowing
+app.use('/api/chat', chatRoutes);
 app.use('/api/symptoms', symptomRoutes);
 app.use('/api/medicine', medicineRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/reports', reportRoutes);
 app.use('/api/news', newsRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', settingsRoutes);
+app.use('/api/reports', reportRoutes);
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({ status: 'error', message: `Route ${req.originalUrl} not found` });
-});
+// Generic Identity & Core Mounts
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api', profileRoutes); // Root mount at target end
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error('[Server Error]', err.stack);
-  res.status(err.status || 500).json({
-    status: 'error',
-    message: err.message || 'Internal Server Error',
+// Health Check Node
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'Operational', 
+    services: { 
+      database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
+      auth: 'Clerk Identity Hub Enabled' 
+    } 
   });
 });
 
-// Database Connection & Server Start
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ MongoDB Database connected.');
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 PulsePo!int API Engine running on http://0.0.0.0:${PORT}`);
+// Database Initialization & Server Activation
+const startNeuralCore = async () => {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ Neural Database Synchronized (Local MongoDB)');
+
+    app.listen(PORT, () => {
+      console.log(`🚀 PulsePoint Neural Core active at http://localhost:${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB Connection Error:', err.message);
-    process.exit(1);
-  });
+  } catch (err) {
+    console.error('❌ Database Sync Collision:', err);
+    process.exit(1); // Finalizing fault protocol
+  }
+};
+
+startNeuralCore();

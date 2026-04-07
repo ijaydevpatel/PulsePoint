@@ -1,116 +1,101 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import fetch from 'node-fetch';
 
 /**
- * Dual-Stage Diagnostic Engine
- * Primary: Gemini 2.5 Flash (Surgical Precision, 20 RPD)
- * Fallback: Gemini 1.5 Flash (High Capacity, 1500 RPD)
- * 
- * @param {Buffer|null} fileBuffer - PDF/Image buffer
- * @param {string} mimeType - MIME Type
- * @param {string} basePrompt - Instructions
- * @param {string} textContext - Pre-extracted text
+ * PulsePoint Dual-Stage Vision Synthesis
+ * Stage 1: Gemini 2.5 Flash (Clinical Extraction)
+ * Stage 2: Gemini 3 Flash (Pathological Synthesis)
  */
-export const callGeminiVision = async (fileBuffer, mimeType, basePrompt = "", textContext = "") => {
-  try {
-    if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
-
-    const modelName = "gemini-2.5-flash";
-    console.log(`[GeminiService] [PRODUCTION LOCK] calling [${modelName}]...`);
-
-    const model = genAI.getGenerativeModel({ 
-      model: modelName,
-      safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-      ]
-    });
-
-    const finalPrompt = basePrompt ? `
-      ${basePrompt}
-      
-      [ADDITIONAL CONTEXT]:
-      ${textContext ? `Extracted Text: ${textContext}` : "Analyze multimodal visual input."}
-    ` : `
-      Analyze the provided medical content.
-      
-      [DOCUMENT CONTEXT]:
-      ${textContext || "Multimodal vision input."}
-      
-      REQUIRED JSON SCHEMA:
-      {
-        "documentType": string,
-        "findings": string,
-        "abnormalMarkers": string[],
-        "implications": string,
-        "advice": string,
-        "riskLevel": "Low" | "Moderate" | "High" | "Critical"
-      }
-      OUTPUT ONLY RAW JSON.
-    `;
-
-    const parts = [finalPrompt];
-    if (fileBuffer) {
-      parts.push({
-        inlineData: {
-          data: fileBuffer.toString("base64"),
-          mimeType
-        }
-      });
-    }
-
-    const result = await model.generateContent(parts);
-    const response = await result.response;
-    const text = response.text();
-
-    if (!text || text.trim().length === 0) throw new Error("Empty response from 2.5 Flash");
-
-    console.log(`[GeminiService] ✅ Success via [${modelName}].`);
-    return { text, modelName };
-
-  } catch (error) {
-    console.error(`[GeminiService] PRODUCTION FAILURE [gemini-2.5-flash]: ${error.message}`);
-    throw error;
-  }
-
-  throw lastError || new Error("Diagnostic Pipeline Exhausted");
+export const generateDualStageAnalysis = async (files, visionPrompt, synthesisPrompt) => {
+  const startTime = Date.now();
+  
+  // STAGE 1: Clinical Extraction (High Fidelity Vision)
+  console.log(`[Neural Pipeline] Starting Stage 1: Clinical Extraction (Gemini 2.5)...`);
+  const extraction = await generateGeminiAnalysis(files, visionPrompt, "gemini-2.5-flash");
+  
+  // STAGE 2: Pathological Synthesis (Advanced Reasoning)
+  console.log(`[Neural Pipeline] Starting Stage 2: Pathological Synthesis (Gemini 3)...`);
+  const fullSynthesisPrompt = `${synthesisPrompt}\n\n[EXTRACTED CLINICAL DATA FROM STAGE 1]:\n${extraction.text}`;
+  
+  // Call Gemini 3 for final synthesis (no files needed, pure reasoning)
+  const synthesis = await generateGeminiAnalysis([], fullSynthesisPrompt, "gemini-3-flash-preview");
+  
+  const totalTime = (Date.now() - startTime) / 1000;
+  
+  return {
+    ...synthesis,
+    generationTime: totalTime,
+    model: `Dual-Core (2.5 -> 3)`,
+    intermediate: extraction.text
+  };
 };
 
 /**
- * High-Reliability Text-Only Diagnostic Pipeline
- * 
- * @param {string} prompt - User clinical input
- * @param {string} systemInstruction - Clinical constraints and JSON schema
+ * PulsePoint Gemini Vision Core
+ * Optimized for Gemini 2.5 (Fidelity) & 3 Flash (Speed/Preview)
  */
-export const callGeminiText = async (prompt, systemInstruction = "") => {
+export const generateGeminiAnalysis = async (files, prompt, targetModel = "gemini-2.5-flash") => {
+  const startTime = Date.now();
+  const apiKey = process.env.GEMINI_API_KEY;
+  
+  // Model Mapping: Ensure 3 alias points to the preview series as requested
+  const modelId = targetModel.includes('3') ? 'gemini-3-flash-preview' : targetModel;
+
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is missing from clinical environment.");
+  }
+
+  // Pre-process files into Gemini's multi-part format
+  const fileParts = (files || []).map(f => ({
+    inline_data: {
+      mime_type: f.mimeType,
+      data: f.buffer.toString('base64')
+    }
+  }));
+
   try {
-    if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY missing");
-
-    const modelName = "gemini-2.5-flash";
-    console.log(`[GeminiService] [TEXT PRODUCTION LOCK] calling [${modelName}]...`);
-
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      systemInstruction: systemInstruction || undefined,
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              ...fileParts
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 1, // Locked at clinical maximum as requested
+          maxOutputTokens: 3072, // Expanded for multi-document synthesis potential
+          topP: 1,
+          responseMimeType: "application/json"
+        }
+      })
     });
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Gemini API Error (${response.status}): ${errorData.error?.message || 'Unknown clinical fault'}`);
+    }
 
-    if (!text || text.trim().length === 0) throw new Error("Empty response from 2.5 Flash (Text)");
-
-    console.log(`[GeminiService] ✅ Success via [${modelName}] (Text).`);
-    return text;
-
+    const data = await response.json();
+    
+    if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+      throw new Error("Gemini Vision core returned an empty diagnostic candidate. Check safety filters.");
+    }
+    
+    const generationTime = (Date.now() - startTime) / 1000;
+    
+    return {
+      text: data.candidates[0].content.parts[0].text,
+      generationTime,
+      model: modelId
+    };
   } catch (error) {
-    console.error(`[GeminiService] TEXT PRODUCTION FAILURE [gemini-2.5-flash]: ${error.message}`);
+    console.error("[Gemini Technical Fault]:", error.message);
     throw error;
   }
 };

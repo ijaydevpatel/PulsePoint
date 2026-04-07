@@ -5,15 +5,24 @@ Write-Host "--------------------------------------------------" -ForegroundColor
 Write-Host "   PulsePo!int: Neural Health Intelligence System   " -ForegroundColor Cyan
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
 
-# 1. Environment Check
+# 1. Environment Hardening: Force Pure Session
+Write-Host "[0/4] Purging existing Node processes (Hard Restart)..." -ForegroundColor Magenta
+try {
+    Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+    Write-Host "      Environment cleared for clean launch." -ForegroundColor Green
+} catch {
+    Write-Host "      No active Node processes detected." -ForegroundColor Gray
+}
+
+# 2. Environment Check
 if (!(Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "[ERROR] Node.js not found. Please install Node.js (v18+) to continue." -ForegroundColor Red
     pause
     exit
 }
 
-# 2. MongoDB Check/Start
-Write-Host "[1/4] Checking MongoDB Status..." -ForegroundColor Yellow
+# 3. MongoDB Check/Start
+Write-Host "[1/5] Checking MongoDB Status..." -ForegroundColor Yellow
 $mongoService = Get-Service | Where-Object {$_.Name -like "*MongoDB*"}
 if ($mongoService) {
     if ($mongoService.Status -ne 'Running') {
@@ -31,8 +40,8 @@ if ($mongoService) {
     Write-Host "      [INFO] MongoDB service not found. Proceeding assuming database is active on 127.0.0.1:27017." -ForegroundColor Cyan
 }
 
-# 3. Backend Setup & Start
-Write-Host "[2/4] Initializing Backend..." -ForegroundColor Yellow
+# 4. Backend Setup & Start
+Write-Host "[2/5] Initializing Backend..." -ForegroundColor Yellow
 $backendPath = Join-Path $PSScriptRoot "backend"
 if (Test-Path $backendPath) {
     Push-Location $backendPath
@@ -46,8 +55,8 @@ if (Test-Path $backendPath) {
     Write-Host "      [ERROR] Backend directory not found!" -ForegroundColor Red
 }
 
-# 4. Frontend Setup & Start
-Write-Host "[3/4] Initializing Frontend..." -ForegroundColor Yellow
+# 5. Frontend Setup & Start
+Write-Host "[3/5] Initializing Frontend..." -ForegroundColor Yellow
 $frontendPath = Join-Path $PSScriptRoot "frontend"
 if (Test-Path $frontendPath) {
     Push-Location $frontendPath
@@ -62,9 +71,9 @@ if (Test-Path $frontendPath) {
 }
 
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-Write-Host "[4/4] DEPLOYMENT COMPLETE" -ForegroundColor Cyan
+Write-Host "[4/5] DEPLOYMENT COMPLETE" -ForegroundColor Cyan
 Write-Host "      Backend: http://localhost:3001" -ForegroundColor Gray
 Write-Host "      Frontend: http://localhost:3000" -ForegroundColor Gray
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan
-Write-Host "PulsePo!int is now running in separate windows." -ForegroundColor Green
+Write-Host "[5/5] PulsePo!int is now running locally in separate windows." -ForegroundColor Green
 pause

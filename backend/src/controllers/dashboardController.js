@@ -7,7 +7,7 @@ import Notification from '../models/Notification.js';
 // @access  Private
 export const getDashboardData = async (req, res) => {
   try {
-    const profile = await Profile.findOne({ user: req.user._id });
+    const profile = await Profile.findOne({ user: req.auth.userId });
     if (!profile) return res.status(400).json({ message: 'Unverified Profile Integration Block.' });
 
     // Fetch real trajectory (Placeholder until new biometric tracking source is implemented)
@@ -28,7 +28,7 @@ export const getDashboardData = async (req, res) => {
     const dynamicInsight = await executeModelChain('DASHBOARD_INSIGHTS', promptText, systemInstruction);
 
     // Fetch real notifications for alerts widget
-    const recentAlerts = await Notification.find({ user: req.user._id })
+    const recentAlerts = await Notification.find({ user: req.auth.userId })
       .sort({ createdAt: -1 })
       .limit(5)
       .select('title createdAt read type');

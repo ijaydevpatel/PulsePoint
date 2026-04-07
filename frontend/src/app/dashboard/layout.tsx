@@ -2,153 +2,171 @@
 
 import React, { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
+import { MobileHeader } from "@/components/dashboard/MobileHeader";
+import { MobileSidebar } from "@/components/dashboard/MobileSidebar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, Search, User, LogOut, Settings, ChevronDown, Activity, CheckCircle2, Moon, Sun } from "lucide-react";
+import { User, LogOut, Settings, ChevronDown, Moon, Sun } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "@/components/core/ThemeProvider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { profile, logout, isAuthenticated } = useUser();
+  const { profile, logout, isAuthenticated, isAuthLoaded, isProfileComplete, displayName } = useUser();
   const router = useRouter();
-  
-  // Strict Profile Protection & Auth Redirect
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
-    } else if (profile && !profile.fullName) {
-      router.push("/profile-setup");
-    }
-  }, [isAuthenticated, profile, router]);
-
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  
-  // Notification States
-  const [unreadCount, setUnreadCount] = useState(2);
-
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const isMapPage = pathname === "/dashboard/map";
   const isAnalyzerPage = pathname === "/dashboard/report";
-  const showSidebarBg = !isMapPage && !isAnalyzerPage;
+  
+  // SYNC: Profile Completion Protection
+  // Note: Basic authentication is now handled at the Edge via middleware.ts
+  useEffect(() => {
+    if (!isAuthLoaded) return; 
+    
+    // Redirect uninitialized biological profiles to Setup Portal
+    if (isAuthenticated && !isProfileComplete && pathname !== "/profile-setup") {
+      console.log("[Identity Sync] Incomplete clinical profile detected. Redirecting to Setup...");
+      router.push("/profile-setup");
+    }
+  }, [isAuthLoaded, isAuthenticated, isProfileComplete, router, pathname]);
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
+
+  // Premium Neural Handshake Transition
+  if (!isAuthLoaded) {
+    return (
+      <div className="h-screen w-full bg-background-app flex flex-col items-center justify-center p-6 text-center overflow-hidden uppercase font-black">
+        <div className="absolute top-0 left-0 w-full h-1 bg-primary/20 blur-sm" />
+        <div className="relative mb-8">
+           <div className="w-24 h-24 rounded-[32px] border border-dashed border-primary/20 animate-spin-slow flex items-center justify-center" />
+           <div className="absolute inset-0 flex items-center justify-center text-primary/40">
+              <div className="w-3 h-3 bg-primary rounded-full animate-ping" />
+           </div>
+        </div>
+        <h2 className="text-xl font-display font-black text-text-primary tracking-tighter uppercase mb-2">Neural Synchronizing</h2>
+        <p className="text-[10px] font-black text-text-secondary uppercase tracking-[0.3em] opacity-50">Syncing Clerk Identity with Profile</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-transparent text-text-primary flex relative">
-      <Sidebar />
+    <div className="h-screen w-full bg-transparent text-text-primary flex flex-col lg:flex-row relative overflow-hidden uppercase font-black">
       
-      {/* App Shell Core - Adaptive Margin for Blending vs Readability */}
-      <main className={`flex-1 flex flex-col relative overflow-hidden h-full transition-all duration-300 ${isMapPage ? 'ml-0' : 'ml-[84px]'}`}>
+      {/* Desktop Sidebar (Only visible on LG+) */}
+      <div className="hidden lg:block shrink-0 relative z-[9999]">
+        <Sidebar />
+      </div>
+
+      {/* Mobile Navigation Header (Only visible on <LG) */}
+      <MobileHeader 
+        onMenuClick={() => setIsMobileMenuOpen(true)}
+      />
+
+      {/* Mobile Drawer (Hamburger Style) */}
+      <MobileSidebar 
+        isOpen={isMobileMenuOpen} 
+        onClose={() => setIsMobileMenuOpen(false)} 
+      />
+      
+      {/* App Shell Core */}
+      <main className={`flex-1 flex flex-col relative transition-all duration-300 ${isMapPage ? 'lg:ml-0' : 'lg:ml-[84px]'} w-full min-w-0 overflow-hidden text-left`}>
         
-        {/* Floating Topbar (Adaptive alignment) */}
-        <header className={`h-[64px] pr-6 mt-4 mb-2 flex items-center justify-between z-50 shrink-0 relative ${isMapPage ? 'pl-[84px]' : 'pl-0'}`}>
-          
-          {/* Left Block Placeholder */}
+        {/* Floating HUD Layer (Desktop Only) */}
+        <header className={`hidden lg:flex fixed top-6 inset-x-8 h-12 items-center justify-between z-[100] shrink-0 pointer-events-none ${isMapPage ? 'pl-20' : 'pl-0'}`}>
           <div className="flex-1" />
 
-          {/* Center Brand Anchor */}
-          <div className="flex-1 flex justify-center items-center pointer-events-none">
-             <div className="px-6 py-2 bg-surface-glass backdrop-blur-sm rounded-full border border-border-glass shadow-sm">
-                <span className="font-sans font-black text-xl tracking-tight text-text-primary">
-                  PulsePo<span className="text-primary">!</span>nt
+          {/* Center Brand Anchor - Independent Pill */}
+          <div className="flex-1 flex justify-center items-center">
+             <div className="px-6 py-2.5 bg-surface-glass/40 backdrop-blur-3xl rounded-full border border-border-glass/30 shadow-neural pointer-events-auto hover:bg-surface-glass/60 transition-all duration-300">
+                <span className="font-display font-black text-xl tracking-tighter text-text-primary">
+                   PulsePo<span className="text-primary">!</span>nt
                 </span>
              </div>
           </div>
 
           {/* Utility Box */}
-          <div className="flex-1 flex justify-end items-center gap-3 h-full">
+          <div className="flex-1 flex justify-end items-center gap-4">
             
-            {/* Soft Notifications Pill */}
-            <div className="relative h-full flex items-center z-50 py-1">
+            {/* Theme Toggle - Independent Pill */}
+            <button 
+              onClick={toggleTheme} 
+              className="w-11 h-11 shadow-neural rounded-full transition-all relative border flex items-center justify-center bg-surface-glass/40 border-border-glass/30 backdrop-blur-3xl hover:bg-surface-glass/60 hover:-translate-y-0.5 active:scale-95 pointer-events-auto"
+              title={theme === "dark" ? "Activate Solar Mode" : "Activate Neural Night"}
+            >
+              {theme === "dark" ? <Sun size={18} strokeWidth={2.5} className="text-text-secondary" /> : <Moon size={18} strokeWidth={2.5} className="text-text-secondary" />}
+            </button>
+
+            {/* Identity & Session Menu - Independent Pill */}
+            <div className="relative pointer-events-auto">
               <button 
-                onClick={() => {setNotifOpen(!notifOpen); setProfileOpen(false);}} 
-                className={`w-[44px] h-[44px] shadow-sm rounded-full transition-all relative cursor-pointer border flex items-center justify-center overflow-visible ${notifOpen ? "bg-surface-low border-primary/20" : "bg-surface-glass border-border-glass backdrop-blur-3xl hover:bg-surface-low hover:border-surface-container-high hover:-translate-y-0.5"}`}
+                onClick={() => setProfileOpen(!profileOpen)} 
+                className={`flex items-center gap-3 px-5 h-11 rounded-full transition-all border shadow-neural backdrop-blur-3xl group ${profileOpen ? 'bg-surface-low border-primary/20' : 'bg-surface-glass/40 border-border-glass/30 hover:bg-surface-glass/60 hover:-translate-y-0.5'}`}
               >
-                <Bell size={18} strokeWidth={2.5} className={notifOpen ? "text-primary" : "text-text-secondary/80"} />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 z-[100] min-w-[16px] h-[16px] px-1 bg-[#E11D48] rounded-full shadow-md shadow-red-500/40 border-2 border-white flex items-center justify-center text-[9px] font-black text-white pointer-events-none">
-                    {unreadCount}
+                <div className="flex flex-col items-end">
+                  <span className="text-xs font-black text-text-primary tracking-tight truncate max-w-[120px] uppercase">
+                    {displayName}
                   </span>
-                )}
-              </button>
-              
-              <AnimatePresence>
-                {notifOpen && (
-                  <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-16 w-[340px] bg-surface-glass backdrop-blur-xl border border-border-glass shadow-float rounded-[24px] p-5 z-50 overflow-hidden">
-                    <div className="flex justify-between items-center mb-4 border-b border-surface-container pb-3">
-                       <h4 className="text-xs font-black uppercase tracking-widest text-text-primary">Alerts</h4>
-                       {unreadCount > 0 && (
-                         <button onClick={() => setUnreadCount(0)} className="flex items-center gap-1 text-[10px] uppercase font-black text-primary hover:text-primary-hover transition-colors">
-                           <CheckCircle2 size={12} /> Mark all read
-                         </button>
-                       )}
-                    </div>
-                    {unreadCount > 0 ? (
-                      <div className="flex flex-col gap-2">
-                         <div className="p-3 bg-surface-low rounded-2xl text-xs font-medium text-text-primary border border-surface-container hover:bg-surface-container transition-colors cursor-pointer flex gap-3 items-start shadow-sm">
-                            <div className="w-2.5 h-2.5 rounded-full bg-accent-crimson mt-0.5 shrink-0 shadow-sm" />
-                            <span className="leading-relaxed font-semibold">Profile setup sequence completed successfully. AI baseline is initializing.</span>
-                         </div>
-                         <div className="p-3 bg-primary/5 text-primary border border-primary/20 rounded-2xl text-xs font-medium leading-relaxed hover:bg-primary/10 transition-colors cursor-pointer flex gap-3 items-start shadow-sm">
-                            <div className="w-2.5 h-2.5 rounded-full bg-primary mt-0.5 shrink-0 shadow-sm" />
-                            <span className="font-semibold">Neural engine ready for continuous monitoring. Review your biometrics.</span>
-                         </div>
-                      </div>
-                    ) : (
-                      <div className="py-8 flex flex-col items-center justify-center opacity-50">
-                        <CheckCircle2 size={32} strokeWidth={2} className="mb-2 text-text-secondary" />
-                        <span className="text-sm font-bold text-text-secondary">You're all caught up!</span>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Theme Toggle Pill */}
-            <div className="relative h-full flex items-center z-50 py-1">
-              <button 
-                onClick={toggleTheme} 
-                className={`w-[44px] h-[44px] shadow-sm rounded-full transition-all relative cursor-pointer border flex items-center justify-center bg-surface-glass border-border-glass backdrop-blur-3xl hover:bg-surface-low hover:border-surface-container-high hover:-translate-y-0.5`}
-              >
-                {theme === "dark" ? <Sun size={18} strokeWidth={2.5} className="text-text-secondary/80" /> : <Moon size={18} strokeWidth={2.5} className="text-text-secondary/80" />}
-              </button>
-            </div>
-
-            {/* Settings Pill */}
-            <div className="relative h-full flex items-center z-50 py-1">
-              <button onClick={() => router.push('/dashboard/settings')} className={`w-[44px] h-[44px] shadow-sm rounded-full transition-all relative cursor-pointer border flex items-center justify-center bg-surface-glass border-border-glass backdrop-blur-3xl hover:bg-surface-low hover:border-surface-container-high hover:-translate-y-0.5`}>
-                <Settings size={18} strokeWidth={2.5} className="text-text-secondary/80 group-hover:text-primary transition-colors" />
-              </button>
-            </div>
-
-            {/* Profile Extended Blob */}
-            <div className="relative h-full flex items-center z-50 py-1">
-              <button onClick={() => {setProfileOpen(!profileOpen); setNotifOpen(false);}} className={`flex items-center gap-2 cursor-pointer group p-1 pr-4 h-[44px] rounded-full transition-all border shadow-sm backdrop-blur-3xl ${profileOpen ? 'bg-surface-low border-primary/20' : 'bg-surface-glass border-border-glass hover:bg-surface-low hover:border-surface-container-high hover:-translate-y-0.5'}`}>
-                <div className="w-8 h-8 rounded-full bg-surface-low flex items-center justify-center shadow-inner transition-all overflow-hidden border border-surface-container shrink-0 text-text-secondary group-hover:text-primary">
-                  {profile?.fullName ? <span className="font-black text-[12px]">{profile.fullName.charAt(0)}</span> : <User size={16} strokeWidth={2.5} />}
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
+                    <span className="text-[8px] text-text-secondary uppercase font-black tracking-[0.2em] opacity-40">
+                      Clerk Active
+                    </span>
+                  </div>
                 </div>
-                <div className="text-left flex flex-col justify-center">
-                  <span className="text-xs font-sans font-black text-text-primary group-hover:text-primary transition-colors leading-tight truncate max-w-[100px]">{profile?.fullName || "Active User"}</span>
-                  <span className="text-[9px] text-text-secondary uppercase font-bold flex items-center gap-1 mt-0.5 tracking-wider"><div className="w-1 h-1 rounded-full bg-green-500" /> Online</span>
-                </div>
+                <ChevronDown size={14} className={`text-text-secondary transition-transform duration-300 ${profileOpen ? 'rotate-180 text-primary' : ''}`} strokeWidth={3} />
               </button>
 
               <AnimatePresence>
                 {profileOpen && (
-                  <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.95 }} className="absolute right-0 top-16 w-56 bg-surface-glass backdrop-blur-xl border border-border-glass shadow-float rounded-[24px] p-2 z-50 flex flex-col overflow-hidden">
-                    <button onClick={logout} className="px-4 py-3 rounded-xl text-sm font-bold text-accent-crimson hover:bg-accent-crimson/10 text-left flex items-center gap-3 transition-colors"><LogOut size={16} strokeWidth={2.5}/> Disconnect Data</button>
-                  </motion.div>
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setProfileOpen(false)} />
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }} 
+                      animate={{ opacity: 1, y: 0, scale: 1 }} 
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }} 
+                      className="absolute right-0 top-14 w-56 bg-surface-glass backdrop-blur-3xl border border-border-glass shadow-float rounded-[32px] p-2.5 z-50 flex flex-col gap-1 overflow-hidden"
+                    >
+                      <button 
+                        onClick={() => { router.push('/dashboard/settings'); setProfileOpen(false); }} 
+                        className="px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-text-primary hover:bg-white/5 flex items-center gap-3 transition-all hover:translate-x-1 group"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                          <Settings size={14} />
+                        </div>
+                        System Settings
+                      </button>
+                      <div className="h-px bg-border-glass mx-4 my-1" />
+                      <button 
+                        onClick={() => { logout(); setProfileOpen(false); }} 
+                        className="px-5 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest text-accent-crimson hover:bg-accent-crimson/10 flex items-center gap-3 transition-all hover:translate-x-1 group"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-accent-crimson/10 flex items-center justify-center text-accent-crimson group-hover:scale-110 transition-transform">
+                          <LogOut size={14} />
+                        </div>
+                        Disconnect Clerk
+                      </button>
+                    </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>
-
           </div>
         </header>
 
-        {/* Dash Content Area - Conditional padding for Map/Analyzer Page (Strict alignment) */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden hide-scrollbar pb-16 pt-2 rounded-t-[32px] ${isMapPage || isAnalyzerPage ? 'pl-0 pr-0' : 'pl-6 pr-6'}`}>
+        {/* Dash Content Area */}
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden ${isMapPage ? 'pt-0 pb-0' : 'pt-24 pb-16'} ${isMapPage || isAnalyzerPage ? 'px-0' : 'px-4 lg:px-8'}`}>
           {children}
         </div>
       </main>

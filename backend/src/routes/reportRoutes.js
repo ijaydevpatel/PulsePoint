@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import { analyzeReport } from '../controllers/reportController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 const upload = multer({ 

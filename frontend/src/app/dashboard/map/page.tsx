@@ -1,263 +1,507 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Search, Map as MapIcon, Hospital, Cross, MapPin, Loader2, Navigation, Activity, LocateFixed, Pill, ClipboardPlus, Microscope, Store, RefreshCcw } from "lucide-react";
+import { useTheme } from "@/components/core/ThemeProvider";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, LocateFixed, Activity, Sparkles, Navigation, FlaskConical, Stethoscope, Wifi, ShieldCheck, Zap, ArrowUpRight } from "lucide-react";
-import dynamic from "next/dynamic";
-
-const MapComponent = dynamic(() => import("@/components/map/MapComponent"), { 
-  ssr: false,
-  loading: () => <div className="w-full h-full bg-black flex items-center justify-center text-primary/50 font-black uppercase tracking-[0.3em] text-[10px]">Syncing 3D Neural Space...</div>
-});
-
-interface Facility {
-  id: string | number;
-  lat: number;
-  lon: number;
-  name: string;
-  type: string;
-  dist?: number;
-}
 
 export default function MapPage() {
-  const [userLocation, setUserLocation] = useState<[number, number]>([22.585, 72.815]); 
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [isLocating, setIsLocating] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<any>(null);
+  const userMarker = useRef<any>(null);
+  
+  // STABILITY: Marker Pooling System (HTML Pills only)
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const isScanningRef = useRef(false);
+  const { theme } = useTheme();
+  
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isScanning, setIsScanning] = useState(false); 
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [infrastructure, setInfrastructure] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [focusedFacility, setFocusedFacility] = useState<Facility | null>(null);
+  
+  const [lng] = useState(72.963);
+  const [lat] = useState(22.562);
+  const [zoom] = useState(14.5);
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
 
-  const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; 
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+  const DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+  const LIGHT_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+
+  // LOGIC: Filter Infrastructure (Spectrum Memo)
+  const filteredInfrastructure = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return infrastructure;
+    return infrastructure.filter(item => 
+      item.name.toLowerCase().includes(query) || 
+      item.type.toLowerCase().includes(query)
+    );
+  }, [infrastructure, searchQuery]);
+
+  // HELPER: COLLISION GUARD (Optimized for Mobile Visibility)
+  const checkLabelCollisions = useCallback(() => {
+    // STRICT MOBILE FIX: Do not hide labels on mobile view strictly
+    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    
+    const labels = document.querySelectorAll('.node-pill-marker');
+    const labelRects: DOMRect[] = [];
+    
+    requestAnimationFrame(() => {
+        labels.forEach((label: any) => {
+          if (label.style.display === 'none') {
+             label.style.visibility = 'hidden';
+             return;
+          }
+
+          label.style.visibility = 'visible';
+          
+          // Only perform collision hiding on Desktop to avoid "missing labels" on small mobile screens
+          if (isMobile) return; 
+
+          const rect = label.getBoundingClientRect();
+          let isOverlapping = false;
+          
+          for (const otherRect of labelRects) {
+            if (!(rect.right < otherRect.left + 5 || rect.left > otherRect.right - 5 || rect.bottom < otherRect.top + 5 || rect.top > otherRect.bottom - 5)) {
+              isOverlapping = true;
+              break;
+            }
+          }
+
+          if (isOverlapping) { 
+             label.style.visibility = 'hidden'; 
+          } else { 
+             labelRects.push(rect); 
+          }
+        });
+    });
   }, []);
 
-  const getBaselineFacilities = useCallback((lat: number, lon: number): Facility[] => {
-    if (Math.abs(lat - 22.58) > 0.2) return []; 
-    return [
-      { id: 'b1', lat: 22.5612, lon: 72.9468, name: "Zydus Hospital Anand", type: "hospital", dist: calculateDistance(lat, lon, 22.5612, 72.9468) },
-      { id: 'b2', lat: 22.5658, lon: 72.9351, name: "Civil Hospital Anand", type: "hospital", dist: calculateDistance(lat, lon, 22.5658, 72.9351) },
-      { id: 'b3', lat: 22.5589, lon: 72.9405, name: "Apollo Pharmacy", type: "pharmacy", dist: calculateDistance(lat, lon, 22.5589, 72.9405) },
-      { id: 'b4', lat: 22.5634, lon: 72.9432, name: "Sardar Patel Hospital", type: "hospital", dist: calculateDistance(lat, lon, 22.5634, 72.9432) },
-      { id: 'b5', lat: 22.5621, lon: 72.9510, name: "Shreeji Pathology Lab", type: "laboratory", dist: calculateDistance(lat, lon, 22.5621, 72.9510) },
-      { id: 'b6', lat: 22.5567, lon: 72.9389, name: "Nilkanth Pharmacy", type: "pharmacy", dist: calculateDistance(lat, lon, 22.5567, 72.9389) },
-      { id: 'b7', lat: 22.5678, lon: 72.9444, name: "Anand Dental Clinic", type: "dentist", dist: calculateDistance(lat, lon, 22.5678, 72.9444) }
-    ];
-  }, [calculateDistance]);
-
-  const fetchNearbyFacilities = useCallback(async (lat: number, lon: number, rawFilter: string) => {
-    setIsSearching(true);
+  // SYNC: Update Map Visibility based on Filter (The "Duo-Sync" Bridge)
+  useEffect(() => {
+    if (!map.current) return;
+    const mi = map.current;
     
-    let filter = rawFilter.trim().toLowerCase();
-    let queryTags = "hospital|clinic|pharmacy|doctors|pathology|dentist|laboratory|social_facility|optician|medical_supply|chemist";
-    
-    if (filter === "lab") queryTags = "pathology|laboratory|mri|xray|diagnostic";
-    else if (filter === "pharmacy" || filter === "medical") queryTags = "pharmacy|chemist|medical_supply";
-    else if (filter === "hospital") queryTags = "hospital|clinic|doctors";
-
-    const baseline = getBaselineFacilities(lat, lon).filter(f => 
-       filter.length > 1 ? (f.name.toLowerCase().includes(filter) || f.type.toLowerCase().includes(filter)) : true
-    );
-    setFacilities(baseline);
-
-    const endpoints = [
-      "https://overpass-api.de/api/interpreter",
-      "https://overpass.kumi.systems/api/interpreter"
-    ];
-    
-    const query = `[out:json][timeout:30];(node["amenity"~"${queryTags}"](around:20000,${lat},${lon});way["amenity"~"${queryTags}"](around:20000,${lat},${lon});node["shop"~"${queryTags}"](around:20000,${lat},${lon});node["healthcare"](around:20000,${lat},${lon});node["name"~"${filter || 'Medical|Health'}",i](around:20000,${lat},${lon}););out center;`;
-
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`);
-        if (!response.ok) continue;
-        const data = await response.json();
-        const mapped: Facility[] = (data.elements || []).map((el: any) => ({
-          id: el.id,
-          lat: el.lat || el.center?.lat,
-          lon: el.lon || el.center?.lon,
-          name: el.tags.name || el.tags["name:en"] || el.tags.operator || "Medical Unit",
-          type: el.tags.amenity || el.tags.healthcare || el.tags.shop || "medical",
-          dist: calculateDistance(lat, lon, (el.lat || el.center?.lat), (el.lon || el.center?.lon))
-        }))
-        .filter((f: any) => filter.length > 1 ? (f.name.toLowerCase().includes(filter) || f.type.toLowerCase().includes(filter)) : true)
-        .sort((a: Facility, b: Facility) => (a.dist || 0) - (b.dist || 0))
-        .slice(0, 150);
-
-        setFacilities(prev => {
-            const ids = new Set(mapped.map(m => m.id));
-            const filteredPrev = prev.filter(p => !ids.has(p.id));
-            return [...filteredPrev, ...mapped].sort((a: Facility, b: Facility) => (a.dist || 0) - (b.dist || 0));
-        });
-        setIsSearching(false);
-        return;
-      } catch (err) { continue; }
+    // 1. UPDATE WEBGL DATA (The Dots)
+    if (mi.getSource('clinical-infrastructure')) {
+       const features = filteredInfrastructure.map(node => ({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: node.coords },
+          properties: { 
+            id: node.id, 
+            color: node.hex, 
+            name: node.name, 
+            type: node.type 
+          }
+       }));
+       
+       try {
+         mi.getSource('clinical-infrastructure').setData({ type: 'FeatureCollection', features });
+       } catch(e) {}
     }
-    setIsSearching(false);
-  }, [calculateDistance, getBaselineFacilities]);
 
-  const handleGlobalSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchNearbyFacilities(userLocation[0], userLocation[1], searchQuery);
+    // 2. UPDATE HTML PILLS (The Labels)
+    const query = searchQuery.toLowerCase().trim();
+    markersRef.current.forEach((marker, id) => {
+       const item = infrastructure.find(node => node.id === id);
+       if (item) {
+          const match = !query || 
+             item.name.toLowerCase().includes(query) || 
+             item.type.toLowerCase().includes(query);
+          
+          const el = marker.getElement();
+          if (match) {
+             el.style.display = 'block';
+             el.style.visibility = 'visible';
+          } else {
+             el.style.display = 'none';
+          }
+       }
+    });
+
+    checkLabelCollisions();
+  }, [filteredInfrastructure, infrastructure, searchQuery, checkLabelCollisions]);
+
+  // HYBRID UI: Premium Rounded Pill Label
+  const createClinicalPill = (label: string) => {
+    const el = document.createElement('div');
+    el.className = 'node-pill-marker';
+    el.style.pointerEvents = 'none';
+    el.style.whiteSpace = 'nowrap';
+    el.style.willChange = 'transform';
+    el.innerHTML = `<div class="node-label-pill">${label}</div>`;
+    return el;
   };
 
-  const handleLocate = () => {
-    setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserLocation([latitude, longitude]);
-        setIsLocating(false);
-        fetchNearbyFacilities(latitude, longitude, searchQuery);
-      },
-      (err) => {
-        setIsLocating(false);
-        fetchNearbyFacilities(userLocation[0], userLocation[1], searchQuery);
-      },
-      { enableHighAccuracy: true }
-    );
+  const createIdentityMarker = () => {
+    const el = document.createElement('div');
+    el.className = 'user-location-marker';
+    el.style.width = '48px';
+    el.style.height = '48px';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.zIndex = '10001';
+    el.style.overflow = 'visible';
+    el.innerHTML = `
+      <div class="user-dot-pulse"></div>
+      <div class="user-dot-core" style="background: #2563eb; border: 2px solid #fff; box-shadow: 0 0 14px #2563eb;"></div>
+    `;
+    return el;
   };
 
-  useEffect(() => { handleLocate(); }, []);
-
-  const openGoogleMaps = (f: Facility) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${f.lat},${f.lon}`;
-    window.open(url, '_blank');
+  const calculateDistance = (p1: [number, number], p2: [number, number]) => {
+    const R = 6371;
+    const dLat = (p2[1] - p1[1]) * Math.PI / 180;
+    const dLon = (p2[0] - p1[0]) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(p1[1] * Math.PI / 180) * Math.cos(p2[1] * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return (R * c).toFixed(1);
   };
+
+  const scanClinicalNodes = useCallback(async (mapInstance: any) => {
+    if (!mapInstance || isScanningRef.current) return;
+    isScanningRef.current = true;
+    setIsScanning(true);
+    
+    try {
+      const bounds = mapInstance.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const bbox = `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+      
+      const query = `
+        [out:json][timeout:35];
+        (
+          node["amenity"~"hospital|clinic|pharmacy|doctors|dentist|healthcare|social_facility|health_post|nursing_home|veterinary|laboratory|blood_bank"](${bbox});
+          node["healthcare"~"hospital|clinic|doctor|pharmacy|laboratory|blood_bank|diagnostic|center|physiotherapist|rehab|radiology|medical_center|mri|scanning"](${bbox});
+          node["shop"~"medical_supply|chemist|pharmacy|optician|hearing_aid"](${bbox});
+          node["office"~"physician|psychiatrist|psychologist|healthcare|laboratory|diagnostic"](${bbox});
+          way["amenity"~"hospital|clinic|pharmacy|doctors|dentist|healthcare|social_facility|health_post|nursing_home|laboratory|blood_bank"](${bbox});
+          way["healthcare"~"hospital|clinic|doctor|pharmacy|laboratory|blood_bank|diagnostic|center|radiology|mri|scanning"](${bbox});
+          way["shop"~"pharmacy|chemist"](${bbox});
+        );
+        out body center;
+      `;
+      
+      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+      if (!response.ok) throw new Error("SAT-SYNC FAULT");
+      
+      const data = await response.json();
+      const lib = await import("maplibre-gl");
+      const maplibregl = lib.default || lib;
+      
+      const currentNodes: any[] = [];
+      const features: any[] = [];
+      const foundIds = new Set<string>();
+
+      data.elements.forEach((el: any) => {
+        const id = `${el.id}`;
+        foundIds.add(id);
+        const coords: [number, number] = el.type === 'node' ? [el.lon, el.lat] : [el.center.lon, el.center.lat];
+        const rawName = el.tags?.name || el.tags?.["name:en"] || "Clinical Node";
+        const amString = `${el.tags?.amenity || ""} ${el.tags?.healthcare || ""} ${el.tags?.shop || ""} ${el.tags?.office || ""}`.toLowerCase();
+
+        let nodeHex = "#e11d48"; // Default: Red (Hospitals)
+        let tw = "text-primary";
+        let icComp = Hospital;
+        let fl = "Clinical Node";
+
+        if (amString.match(/pharmacy|chemist|medical_supply|drugstore|medicine|optician|hearing_aid/)) { 
+           nodeHex = "#10b981"; tw = "text-green-500 font-black"; icComp = Pill; fl = "Medical Store"; 
+        } else if (amString.match(/laboratory|blood_bank|diagnostic|lab|pathology|radiology|center|mri|scanning|scan/)) { 
+           nodeHex = "#10b981"; tw = "text-green-500 font-black"; icComp = Microscope; fl = "Diagnostic Lab"; 
+        } else if (amString.match(/doctor|dentist|clinic|general|physician|physiothe|physio|rehab|psych/)) { 
+           nodeHex = "#a855f7"; tw = "text-purple-500 font-black"; icComp = ClipboardPlus; fl = "Clinical Triage"; 
+        }
+
+        features.push({
+          type: "Feature",
+          geometry: { type: "Point", coordinates: coords },
+          properties: { id, color: nodeHex, name: rawName, type: fl }
+        });
+
+        if (!markersRef.current.has(id)) {
+           try {
+             const pillEl = createClinicalPill(rawName.toUpperCase());
+             const marker = new (maplibregl as any).Marker({ element: pillEl, anchor: 'bottom', offset: [0, -12] }).setLngLat(coords).addTo(mapInstance);
+             markersRef.current.set(id, marker);
+           } catch(e) {}
+        }
+
+        const dist = userPos ? calculateDistance(userPos, coords) : "...";
+        currentNodes.push({ id, name: rawName, type: fl.toUpperCase(), hex: nodeHex, dist: dist, coords, icon: icComp, color: tw });
+      });
+
+      markersRef.current.forEach((marker, id) => {
+         if (!foundIds.has(id)) { try { marker.remove(); markersRef.current.delete(id); } catch(e) {} }
+      });
+
+      if (mapInstance.getSource('clinical-infrastructure')) {
+         mapInstance.getSource('clinical-infrastructure').setData({ type: 'FeatureCollection', features });
+      }
+
+      setInfrastructure(currentNodes.slice(0, 500));
+      setTimeout(checkLabelCollisions, 800);
+
+    } catch(err) {
+      console.warn("Clinical Intelligence Handshake fault...");
+    } finally {
+      isScanningRef.current = false;
+      setIsScanning(false);
+    }
+  }, [userPos, checkLabelCollisions]);
+
+  const injectClinicalHardware = (mi: any) => {
+     if (!mi || mi.getSource('clinical-infrastructure')) return;
+     mi.addSource('clinical-infrastructure', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+     
+     mi.addLayer({ 
+        id: 'clinical-glow', 
+        type: 'circle', 
+        source: 'clinical-infrastructure', 
+        paint: { 
+           'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 10, 2, 15, 7, 20, 20], 
+           'circle-color': ['get', 'color'], 
+           'circle-opacity': 0.3, 
+           'circle-blur': 0.85 
+        } 
+     });
+
+     mi.addLayer({ 
+        id: 'clinical-pulses', 
+        type: 'circle', 
+        source: 'clinical-infrastructure', 
+        paint: { 
+           'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 10, 1.2, 15, 4.5, 20, 10], 
+           'circle-color': ['get', 'color'], 
+           'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 16, 1.5], 
+           'circle-stroke-color': '#000000', 
+           'circle-opacity': 1.0 
+        } 
+     });
+  };
+
+  const inject3DArchitecture = (mapInstance: any, isDark: boolean) => {
+    if (!mapInstance || !mapInstance.getStyle()) return;
+    const style = mapInstance.getStyle();
+    const sn = style.sources.carto ? 'carto' : 'openmaptiles';
+    style.layers.forEach((layer: any) => { if (layer.id.includes('building') && !layer.id.startsWith('3d-')) { try { mapInstance.setLayoutProperty(layer.id, 'visibility', 'none'); } catch(e) {} } });
+    const architecturalLayers = ['building', 'building-part', 'buildings', 'architectural'];
+    const sourceObj: any = mapInstance.getSource(sn);
+    const availableLayers = sourceObj?.vectorLayerIds || sourceObj?._vectorLayers?.map((l: any) => l.id) || ['building'];
+    architecturalLayers.forEach(layerName => {
+      if (!availableLayers.includes(layerName)) return;
+      const layerId = `3d-${layerName}`;
+      if (mapInstance.getLayer(layerId)) { try { mapInstance.removeLayer(layerId); } catch(e) {} }
+      try {
+          mapInstance.addLayer({ 'id': layerId, 'source': sn, 'source-layer': layerName, 'type': 'fill-extrusion', 'minzoom': 13, 'paint': { 'fill-extrusion-color': isDark ? '#ffffff' : '#000000', 'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 13, 0, 13.05, ['*', ['coalesce', ['get', 'render_height'], ['get', 'height'], 30], 3]], 'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 13, 0, 13.05, ['*', ['coalesce', ['get', 'render_min_height'], ['get', 'min_height'], 0], 3]], 'fill-extrusion-opacity': 1.0 } });
+      } catch (err) {}
+    });
+  };
+
+  useEffect(() => {
+    if (map.current || !mapContainer.current) return;
+    const initializeMap = async () => {
+      if (!mapContainer.current) return;
+      try {
+        const lib = await import("maplibre-gl");
+        const maplibregl = lib.default || lib;
+        const mapInstance = new (maplibregl as any).Map({ container: mapContainer.current, style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE, center: [lng, lat], zoom: zoom, pitch: 62, bearing: -15, attributionControl: false, antialias: true });
+        mapInstance.on('load', () => { if (!mapInstance) return; inject3DArchitecture(mapInstance, theme === 'dark'); injectClinicalHardware(mapInstance); scanClinicalNodes(mapInstance); });
+        map.current = mapInstance;
+      } catch (err) { console.warn("Neural engine check..."); }
+    };
+    initializeMap();
+    return () => { if (map.current) { map.current.remove(); map.current = null; } };
+  }, []);
+
+  useEffect(() => {
+    if (!map.current) return;
+    const mi = map.current;
+    const handleMove = () => { if (mi.getZoom() > 11) { scanClinicalNodes(mi); } checkLabelCollisions(); };
+    mi.on('moveend', handleMove);
+    return () => { mi.off('moveend', handleMove); };
+  }, [scanClinicalNodes, checkLabelCollisions]);
+
+  useEffect(() => {
+    if (!map.current) return;
+    const mi = map.current;
+    try {
+      mi.setStyle(theme === 'dark' ? DARK_STYLE : LIGHT_STYLE);
+      mi.once('styledata', () => { inject3DArchitecture(mi, theme === 'dark'); injectClinicalHardware(mi); scanClinicalNodes(mi); });
+    } catch (e) {}
+  }, [theme, scanClinicalNodes]);
+
+  const onSynchronize = () => {
+    if (!map.current || isSyncing) return;
+    setIsSyncing(true);
+    if (typeof window !== "undefined" && navigator.geolocation) {
+       navigator.geolocation.getCurrentPosition((pos) => { setUserPos([pos.coords.longitude, pos.coords.latitude]); setIsSyncing(false); }, () => { setIsSyncing(false); }, { enableHighAccuracy: true, timeout: 5000 });
+    } else { setIsSyncing(false); }
+  };
+
+  useEffect(() => {
+    if (!map.current || !userPos) return;
+    const syncIdentityHub = async () => {
+       try {
+         const lib = await import("maplibre-gl");
+         const maplibregl = lib.default || lib;
+         if (userMarker.current) { userMarker.current.setLngLat(userPos); } else {
+           const el = createIdentityMarker();
+           userMarker.current = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(userPos).addTo(map.current);
+         }
+         map.current.flyTo({ center: userPos, zoom: 16, duration: 2500, pitch: 65 });
+         setTimeout(() => { if (map.current) scanClinicalNodes(map.current); }, 2700);
+       } catch(e) {}
+    };
+    syncIdentityHub();
+  }, [userPos, scanClinicalNodes]);
+
+  const zoomToNode = (coords: [number, number]) => {
+    if (!map.current) return;
+    map.current.flyTo({ center: coords, zoom: 17.5, pitch: 65, duration: 2500, essential: true });
+    if (window.innerWidth < 768) { setIsMobileDrawerOpen(false); }
+  };
+
+  const getDirections = (node: any) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${node.coords[1]},${node.coords[0]}`;
+    window.open(url, "_blank");
+  };
+
+  const refreshInfrastructure = () => { if (map.current) { scanClinicalNodes(map.current); } };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full flex flex-col absolute inset-0 bg-black overflow-hidden font-sans">
-      
-      {/* 3D Active Pill */}
-      <div className="absolute top-[88px] right-6 z-[100] flex items-center gap-4 px-6 py-2.5 bg-primary/10 backdrop-blur-3xl rounded-full border border-primary/20 shadow-2xl pointer-events-none group">
-         <Zap size={14} className="text-primary animate-pulse" />
-         <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em] italic">Neural 3D Active</span>
-         <div className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest italic tracking-tighter">MAX_DENSITY_discovery</span>
+    <div className="h-full w-full relative overflow-hidden bg-background-app uppercase font-black tracking-tight">
+      <div ref={mapContainer} className="absolute inset-0 z-0 h-full w-full" />
+
+      {/* HUD STACK */}
+      <div className="hidden md:flex absolute top-8 left-[112px] bottom-8 w-[390px] flex-col gap-5 z-10 pointer-events-none">
+         <div className="bg-surface-glass/40 backdrop-blur-3xl border border-border-glass/30 rounded-[40px] p-6 shadow-neural pointer-events-auto shrink-0 flex flex-col gap-6">
+            <div className="flex items-center gap-4">
+               <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20"><MapIcon size={20} /></div>
+               <div>
+                  <h1 className="text-xl font-display font-black text-text-primary tracking-tighter uppercase leading-none">Medical Map</h1>
+                  <p className="text-[9px] font-black text-primary uppercase tracking-[0.2em] opacity-40 mt-1">Saturated Intelligence</p>
+               </div>
+            </div>
+            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-[20px] p-1.5 focus-within:border-primary/40 focus-within:bg-white/10 transition-all shadow-inner group">
+               <div className="w-9 h-9 rounded-[14px] bg-primary/10 flex items-center justify-center text-primary group-focus-within:scale-95 transition-transform"><Search size={18} /></div>
+               <input 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="FILTER SPECTRUM..." 
+                  className="bg-transparent text-[10px] font-black text-text-primary focus:outline-none placeholder:text-text-secondary uppercase tracking-[0.05em] flex-1" 
+               />
+               {searchQuery && (
+                 <button onClick={() => setSearchQuery("")} className="px-3 text-[9px] font-black text-primary hover:text-white uppercase tracking-widest transition-colors">Clear</button>
+               )}
+            </div>
+         </div>
+
+         <div className="bg-surface-glass/40 backdrop-blur-3xl border border-border-glass/30 rounded-[40px] p-8 shadow-neural pointer-events-auto flex-1 min-h-0 flex flex-col">
+            <div className="flex flex-col gap-2 mb-8 shrink-0">
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                     <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.4em] font-display">Neural Spectrum</h4>
+                     <button onClick={refreshInfrastructure} disabled={isScanning} className="p-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-90 border border-primary/20 flex items-center justify-center">
+                        <RefreshCcw size={12} className={isScanning ? "animate-spin" : ""} />
+                     </button>
+                  </div>
+                  {isScanning && (
+                    <div className="flex items-center gap-2">
+                       <span className="text-[8px] font-black text-primary uppercase tracking-widest animate-pulse leading-none">SAT-SYNC MONITORING</span>
+                    </div>
+                  )}
+               </div>
+               <p className="text-[11px] font-black text-text-primary tracking-tight leading-none opacity-80 uppercase truncate">
+                  {searchQuery ? `Filtering: ${searchQuery}` : "Live Infinity Infrastructure"}
+               </p>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-6">
+               <AnimatePresence mode="popLayout">
+                  {filteredInfrastructure.length > 0 ? filteredInfrastructure.map((node, i) => (
+                    <motion.div 
+                       layout 
+                       initial={{ opacity: 0, y: 10 }}
+                       animate={{ opacity: 1, y: 0 }}
+                       exit={{ opacity: 0, scale: 0.9 }}
+                       key={node.id} 
+                       className="flex items-center justify-between group py-2 border-b border-white/5 last:border-0 hover:bg-white/5 rounded-2xl px-2 transition-colors text-left uppercase"
+                    >
+                        <div onClick={() => zoomToNode(node.coords as [number, number])} className="flex flex-col gap-2 flex-1 cursor-pointer min-w-0 text-left">
+                           <span className="text-[12px] font-black text-text-primary tracking-tight leading-tight group-hover:text-primary transition-colors truncate">{node.name}</span>
+                           <div className="flex items-center gap-4 text-[9px] font-black text-text-secondary tracking-widest leading-none">
+                              <span className={`flex items-center gap-2 ${node.color} truncate`}><node.icon size={11} /> {node.type}</span>
+                              <span className="opacity-40">• {node.dist} KM</span>
+                           </div>
+                        </div>
+                        <button onClick={() => getDirections(node)} className="w-11 h-11 rounded-xl bg-white/5 hover:bg-primary/20 flex items-center justify-center text-text-secondary hover:text-primary transition-all pointer-events-auto border border-white/10 shadow-sm shrink-0"><Navigation size={16} /></button>
+                    </motion.div>
+                  )) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-center gap-4 opacity-40">
+                       <Search size={40} />
+                       <span className="text-[10px] font-black uppercase tracking-[0.2em]">No Infrastructure Matches</span>
+                    </div>
+                  )}
+               </AnimatePresence>
+            </div>
          </div>
       </div>
 
-      <div className="flex-1 flex relative">
-        <div className="flex-1 relative z-10 overflow-hidden">
-          <MapComponent 
-            userLocation={userLocation} 
-            facilities={facilities}
-            focusedFacility={focusedFacility}
-            onMapClick={(lat, lon) => { fetchNearbyFacilities(lat, lon, searchQuery); }}
-            onFacilitySelect={(f) => setFocusedFacility(f)}
-          />
-        </div>
-
-        {/* Intelligence Overlays (Offset for Sidebar Harmony) */}
-        <div className="absolute top-6 left-[92px] z-30 pointer-events-none w-80 max-h-[92%] flex flex-col">
-          <div className="pointer-events-auto bg-black/60 backdrop-blur-3xl p-6 rounded-[40px] border border-white/10 shadow-3xl mb-4 flex flex-col gap-4">
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                Infinity Grid <Sparkles size={18} className="text-primary" />
-              </h1>
-              <span className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mt-1 ml-1 opacity-80 italic italic">Neural Search Optimized</span>
-            </div>
-
-            <div className="relative group focus-within:ring-2 ring-primary/30 transition-all rounded-full bg-white/5 border border-white/10 overflow-hidden shadow-inner">
-              <form onSubmit={handleGlobalSearch} className="flex items-center px-5">
-                 <Search size={16} className="text-primary opacity-50" />
-                 <input 
-                  type="text" 
-                  placeholder="Scan Lab, Pharmacy, Hospital..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent py-4 px-3 text-[11px] font-bold text-text-primary focus:outline-none placeholder:text-white/20"
-                 />
-              </form>
-            </div>
-          </div>
-
-          <div className="pointer-events-auto flex-1 bg-black/60 backdrop-blur-3xl p-8 rounded-[40px] border border-white/10 shadow-3xl flex flex-col min-h-0 overflow-hidden">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex flex-col">
-                 <h2 className="text-[12px] font-black text-text-primary uppercase tracking-[0.2em] flex items-center gap-3">
-                   Neural Sector <Activity size={16} className="text-primary" />
-                 </h2>
-                 <span className="text-[8.5px] font-black text-text-secondary uppercase tracking-[0.2em] mt-2 italic opacity-50 tracking-tighter">Clinical Infrastructure</span>
-              </div>
-              <Wifi size={14} className={isSearching ? 'text-primary animate-ping' : 'text-green-400'} />
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-4 pr-3 scrollbar-none custom-scrollbar">
-              <AnimatePresence mode="popLayout">
-                {facilities.length > 0 ? (
-                  facilities.map((f) => (
-                    <motion.div 
-                      key={f.id}
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ scale: 0.9, opacity: 0 }}
-                      onClick={() => setFocusedFacility(f)}
-                      className={`group bg-white/5 hover:bg-white/10 border p-5 rounded-[32px] cursor-pointer transition-all duration-300 relative overflow-hidden active:scale-95 ${focusedFacility?.id === f.id ? 'border-primary/50 ring-1 ring-primary/20' : 'border-white/5'}`}
-                    >
-                      <div className="flex flex-col relative z-10">
-                         <div className="flex items-start justify-between mb-4">
-                            <div className="flex-1">
-                               <h3 className="text-[12.5px] font-black text-text-primary leading-tight mb-2 group-hover:text-primary transition-colors">{f.name}</h3>
-                               <div className="flex items-center gap-3">
-                                  <div className={`text-[8px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${f.type.includes('pharm') || f.name.toLowerCase().includes('pharm') ? 'bg-primary/20 text-primary' : (f.type.includes('lab') ? 'bg-purple-500/20 text-purple-500' : 'bg-red-500/20 text-red-500')}`}>
-                                     {f.type}
-                                  </div>
-                                  <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.1em]">{f.dist?.toFixed(1)} km</span>
-                               </div>
-                            </div>
-                            <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white transition-all shadow-neural">
-                               {f.type.includes('pharm') || f.name.toLowerCase().includes('pharm') ? <FlaskConical size={18} /> : (f.type.includes('lab') ? <Zap size={18} /> : <Stethoscope size={18} />)}
-                            </div>
-                         </div>
-                         
-                         <button 
-                          onClick={(e) => { e.stopPropagation(); openGoogleMaps(f); }}
-                          className="flex items-center justify-center gap-2 w-full py-2.5 bg-white/5 hover:bg-white/20 rounded-full border border-white/5 text-[9px] font-black uppercase tracking-widest text-text-secondary transition-all group-hover:border-primary/30 group-hover:text-primary"
-                        >
-                            Get Directions <ArrowUpRight size={12} />
-                         </button>
-                      </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-20 opacity-20">
-                     <Activity size={32} className="animate-pulse mb-4 text-primary" />
-                     <p className="text-[10px] font-black uppercase tracking-[0.3em]">Analyzing Grid...</p>
-                  </div>
-                )}
-              </AnimatePresence>
-            </div>
-            {/* Removed the statusMsg div (the "bar") for professional UI cleanup */}
-          </div>
-        </div>
-
-        {/* GPS Control (Bottom Right) */}
-        <div className="absolute bottom-10 right-10 z-30 pointer-events-none w-80">
-            <div className="pointer-events-auto bg-black/50 backdrop-blur-3xl p-6 rounded-[32px] border border-white/10 shadow-3xl w-full">
-                <label className="text-[9px] font-black text-primary uppercase tracking-[0.3em] mb-2 flex items-center gap-2 italic">
-                   Neural Signal <ShieldCheck size={12} />
-                </label>
-                <div className="flex items-center justify-between">
-                   <div className="flex flex-col">
-                      <span className="text-[11px] font-black text-text-primary uppercase tracking-[0.2em]">{isLocating ? 'Scanning...' : 'Signal Locked'}</span>
-                      <span className="text-[8px] font-bold text-white/20 uppercase mt-1 tracking-widest italic opacity-50 tracking-tighter">Anand Grid Master-03</span>
-                   </div>
-                   <button onClick={handleLocate} disabled={isLocating} className="w-12 h-12 bg-primary text-white rounded-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-neural disabled:opacity-50">
-                     <LocateFixed size={20} />
-                   </button>
-                </div>
-            </div>
-        </div>
-
+      <div className="hidden md:flex fixed bottom-10 right-10 z-[150]">
+         <button onClick={onSynchronize} disabled={isSyncing} className="w-14 h-14 bg-surface-glass/80 backdrop-blur-3xl border border-border-glass rounded-full shadow-float flex items-center justify-center text-primary group active:scale-95 transition-all pointer-events-auto shadow-neutral-blue focus:outline-none shadow-neutral">
+            {isSyncing ? <Loader2 size={24} className="animate-spin" /> : <LocateFixed size={26} />}
+         </button>
       </div>
-    </motion.div>
+
+      <motion.div initial={false} animate={{ height: isMobileDrawerOpen ? '65vh' : '72px' }} className="md:hidden fixed bottom-0 inset-x-0 bg-surface-glass/80 backdrop-blur-3xl border-t border-border-glass rounded-t-[40px] z-50 pointer-events-auto flex flex-col overflow-hidden text-left uppercase">
+         <div onClick={() => setIsMobileDrawerOpen(!isMobileDrawerOpen)} className="h-[72px] w-full flex flex-col items-center justify-center shrink-0 cursor-pointer text-center">
+            <div className="w-12 h-1.5 bg-white/10 rounded-full mb-2" />
+            <div className="flex items-center gap-2"><Activity size={12} className="text-primary animate-pulse" /><span className="text-[10px] font-black text-text-primary uppercase tracking-[0.3em]">Precision Spectrum Scan</span></div>
+         </div>
+         <div className="flex-1 overflow-hidden px-6 pb-8 flex flex-col gap-8 text-left">
+            <div className="flex flex-col gap-4 shrink-0">
+               <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] font-black text-primary uppercase tracking-widest font-display">Neural Spectrum</h4>
+                  <button onClick={refreshInfrastructure} disabled={isScanning} className="p-3 rounded-xl bg-primary/10 text-primary border border-primary/20 active:scale-90 transition-all"><RefreshCcw size={16} className={isScanning ? "animate-spin" : ""} /></button>
+               </div>
+               <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-[16px] p-1 pr-4 pointer-events-auto">
+                  <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center text-primary"><Search size={18} /></div>
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="FILTER SPECTRUM..." className="bg-transparent text-[10px] font-black text-text-primary focus:outline-none w-full uppercase tracking-widest" />
+               </div>
+            </div>
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-6 pointer-events-auto">
+               <AnimatePresence mode="popLayout">
+               {filteredInfrastructure.map((node, i) => (
+                  <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={node.id} className="flex items-center justify-between group py-1">
+                     <div onClick={() => zoomToNode(node.coords as [number, number])} className="flex flex-col gap-1 min-w-0 cursor-pointer text-left">
+                        <span className="text-[11px] font-black text-text-primary uppercase truncate group-hover:text-primary transition-colors">{node.name}</span>
+                        <div className="flex items-center gap-3 text-[8px] font-black text-text-secondary uppercase tracking-wider">
+                           <span className={node.color}>{node.type}</span>
+                           <span className="opacity-40">• {node.dist} KM</span>
+                        </div>
+                     </div>
+                     <button onClick={() => getDirections(node)} className="p-3.5 rounded-xl bg-white/5 text-text-secondary hover:bg-primary border border-white/10 transition-all active:scale-90"><Navigation size={14} /></button>
+                  </motion.div>
+               ))}
+               </AnimatePresence>
+            </div>
+         </div>
+      </motion.div>
+
+      <style jsx global>{`
+         .node-pill-marker { z-index: 10000; }
+         .node-label-pill { background: #000; color: #fff; padding: 6px 14px; border-radius: 100px; font-size: 8px; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 1; transition: opacity 0.3s; }
+         .user-location-marker { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; z-index: 10001 !important; }
+         .user-dot-core { width: 14px; height: 14px; background: #2563eb; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 15px rgba(37, 99, 235, 0.9); z-index: 10; }
+         .user-dot-pulse { position: absolute; width: 36px; height: 36px; background: rgba(37, 99, 235, 0.4); border-radius: 50%; animation: user-heartbeat 2.5s infinite; }
+         @keyframes user-heartbeat { 0% { transform: scale(0.7); opacity: 0.9; } 70% { transform: scale(1.6); opacity: 0; } 100% { transform: scale(0.7); opacity: 0; } }
+         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(225, 29, 72, 0.2); border-radius: 10px; }
+      `}</style>
+    </div>
   );
 }

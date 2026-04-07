@@ -1,11 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useAuth, useUser as useClerkUser } from "@clerk/nextjs";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import { apiClient } from "@/lib/api";
+import { useUser as useClerkUser, useAuth, useClerk } from "@clerk/nextjs";
 
 export interface UserProfile {
+  email: string;
   fullName: string;
+  profilePicture?: string;
   age: number;
   gender: string;
   height: number;
@@ -49,24 +51,31 @@ export interface UserProfile {
 
 interface UserContextType {
   isAuthenticated: boolean;
+  isAuthLoaded: boolean;
   isProfileComplete: boolean;
   profile: UserProfile | null;
+  displayName: string;
+  token: string | null;
   logout: () => void;
   saveProfile: (data: UserProfile) => void;
-  // Legacy compatibility shim — keeps existing pages working
-  login: (token: string, profileCompleted: boolean, userData?: UserProfile) => void;
+  sessionError: string | null;
+  clerkUser: any;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-  const { isSignedIn, isLoaded, getToken, signOut } = useAuth();
-  const { user: clerkUser } = useClerkUser();
+  const { isLoaded: isClerkLoaded, isSignedIn, user: clerkUser } = useClerkUser();
+  const { getToken, signOut } = useAuth();
+  
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   const sanitizeProfile = (p: any): UserProfile => ({
     ...p,
+    email: p.email || "",
     allergies: Array.isArray(p.allergies) ? p.allergies : [],
     conditions: Array.isArray(p.conditions) ? p.conditions : [],
     medications: Array.isArray(p.medications) ? p.medications : [],
@@ -77,92 +86,108 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     osint: p.osint || null,
   });
 
-  // Fetch PulsePo!int profile when Clerk user is signed in
+  const displayName = profile?.fullName || clerkUser?.fullName || clerkUser?.username || "User";
+
+  // SYNC: Token Provider Bridge
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
+    if (isSignedIn) {
+      apiClient.setTokenProvider(async () => {
+        try {
+          return await getToken();
+        } catch (e) {
+          console.error("[Neural Link] Token Handshake Fault:", e);
+          return null;
+        }
+      });
+    } else {
+      apiClient.setTokenProvider(() => Promise.resolve(null));
+    }
+  }, [isSignedIn, getToken]);
+
+  const triggerLocationPulse = useCallback(() => {
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        () => {}, 
+        () => {}, 
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  }, []);
+
+  const saveProfile = useCallback((newProfile: UserProfile) => {
+    const sanitized = sanitizeProfile(newProfile);
+    setProfile(sanitized);
+    setIsProfileComplete(true);
+  }, []);
+
+  const logout = useCallback(() => {
+    signOut();
+  }, [signOut]);
+
+  // Fetch Clinical Profile when Clerk identity is ready
+  useEffect(() => {
+    if (!isClerkLoaded) return;
+    
+    if (!isSignedIn) {
       setProfile(null);
       setIsProfileComplete(false);
+      setIsAuthLoaded(true);
       return;
     }
 
-    // Sync token provider with the API client
-    apiClient.setTokenProvider(() => getToken());
-
     const fetchProfile = async () => {
+      setIsAuthLoaded(false); 
+
+      // Neural Handshake Timeout
+      const timeoutId = setTimeout(() => {
+        setIsAuthLoaded(true);
+        console.warn("[Neural Handshake] Profile extraction timeout stalling. Bypassing lock.");
+      }, 5000);
+
       try {
         const data = await apiClient.get("/profile");
         if (data && data.fullName) {
           const sanitized = sanitizeProfile(data);
           setProfile(sanitized);
           setIsProfileComplete(true);
-          localStorage.setItem("pulsepo!int-profile", JSON.stringify(sanitized));
+          setSessionError(null);
+        } else {
+          setIsProfileComplete(false);
         }
       } catch (error: any) {
-        if (error.status === 404 || error.message?.includes("404")) {
-          console.log("Profile not found (new user) — handled gracefully.");
+        if (error.status === 401) {
+           console.warn("[Neural Handshake] Identity mismatch. Re-authenticating Clerk...");
+        } else if (error.status === 404) {
+          console.log("[Neural Link] Biological profile not yet initialized.");
+          setIsProfileComplete(false);
         } else {
-          console.error("Profile sync error:", error);
+          console.error("[Neural Hub] Extraction error:", error);
         }
+      } finally {
+        clearTimeout(timeoutId);
+        setIsAuthLoaded(true);
+        triggerLocationPulse();
       }
     };
 
     fetchProfile();
+  }, [isClerkLoaded, isSignedIn, triggerLocationPulse]);
 
-    // Heartbeat: Automatic token refresh every 50 seconds to prevent expiry
-    const heartbeat = setInterval(async () => {
-      if (isLoaded && isSignedIn) {
-        const token = await getToken();
-        if (token) {
-          localStorage.setItem("pulsepo!int_token", token);
-          console.log("[AuthHeartbeat] Neural token refreshed.");
-        }
-      }
-    }, 50000);
-
-    return () => clearInterval(heartbeat);
-  }, [isLoaded, isSignedIn, clerkUser?.id]);
-
-  const logout = async () => {
-    localStorage.removeItem("pulsepo!int_token");
-    localStorage.removeItem("pulsepo!int-auth");
-    localStorage.removeItem("pulsepo!int-profile");
-    setProfile(null);
-    setIsProfileComplete(false);
-    await signOut();
-  };
-
-  const saveProfile = (data: UserProfile) => {
-    const sanitized = sanitizeProfile(data);
-    localStorage.setItem("pulsepo!int-profile", JSON.stringify(sanitized));
-    setProfile(sanitized);
-    setIsProfileComplete(true);
-  };
-
-  // Legacy shim — kept for compatibility
-  const login = (_token: string, profileCompleted: boolean, userData?: UserProfile) => {
-    setIsProfileComplete(profileCompleted);
-    if (userData) {
-      const sanitized = sanitizeProfile(userData);
-      setProfile(sanitized);
-      localStorage.setItem("pulsepo!int-profile", JSON.stringify(sanitized));
-    }
-  };
-
-  // IMPORTANT: Do NOT return null during loading — this unmounts the form tree
-  // and causes React state (input values) to reset, breaking the form UX.
-  // Instead always render children, even while Clerk is initializing.
+  const value = useMemo(() => ({
+    isAuthenticated: !!isSignedIn,
+    isAuthLoaded: isClerkLoaded && isAuthLoaded,
+    isProfileComplete,
+    profile,
+    displayName,
+    token: null, // Legacy Token Field
+    logout,
+    saveProfile,
+    sessionError,
+    clerkUser
+  }), [isSignedIn, isClerkLoaded, isAuthLoaded, isProfileComplete, profile, displayName, logout, saveProfile, sessionError, clerkUser]);
 
   return (
-    <UserContext.Provider
-      value={{
-        isAuthenticated: isLoaded ? !!isSignedIn : false,
-        isProfileComplete,
-        profile,
-        logout,
-        saveProfile,
-        login,
-      }}
-    >
+    <UserContext.Provider value={value}>
       {children}
     </UserContext.Provider>
   );

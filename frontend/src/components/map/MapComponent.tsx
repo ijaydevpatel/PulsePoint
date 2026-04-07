@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { MapMobileControls } from "./MapMobileControls";
 
 interface Facility {
   id: string | number;
@@ -18,14 +19,35 @@ interface MapProps {
   focusedFacility?: Facility | null;
   onMapClick: (lat: number, lon: number) => void;
   onFacilitySelect?: (f: Facility) => void;
+  onLocate: () => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  isSearching: boolean;
+  onSearchSubmit: (e: React.FormEvent) => void;
 }
 
-export default function MapComponent({ userLocation, facilities, focusedFacility, onMapClick, onFacilitySelect }: MapProps) {
+export default function MapComponent({ 
+  userLocation, 
+  facilities, 
+  focusedFacility, 
+  onMapClick, 
+  onFacilitySelect,
+  onLocate,
+  searchQuery,
+  setSearchQuery,
+  isSearching,
+  onSearchSubmit
+}: MapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
   const userMarker = useRef<maplibregl.Marker | null>(null);
   const [isReady, setIsReady] = useState(false);
+
+  const filteredFacilities = facilities.filter(f => 
+    f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    f.type.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -202,8 +224,22 @@ export default function MapComponent({ userLocation, facilities, focusedFacility
   }, [facilities, isReady, focusedFacility]);
 
   return (
-    <div className="w-full h-full relative bg-black">
+    <div className="w-full h-full relative bg-black overflow-hidden">
       <div ref={mapContainer} className="w-full h-full" />
+      
+      {/* Mobile-Only Overlays */}
+      <MapMobileControls 
+        facilities={filteredFacilities} 
+        onFacilityClick={(f) => {
+          if (onFacilitySelect) onFacilitySelect(f);
+        }}
+        userLocation={userLocation}
+        onLocate={onLocate}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        isSearching={isSearching}
+        onSearchSubmit={onSearchSubmit}
+      />
     </div>
   );
 }

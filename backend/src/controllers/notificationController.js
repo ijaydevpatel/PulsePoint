@@ -5,7 +5,7 @@ import Notification from '../models/Notification.js';
 // @access  Private
 export const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({ user: req.user._id })
+    const notifications = await Notification.find({ user: req.auth.userId })
       .sort({ createdAt: -1 })
       .limit(50); // Cap at 50 recent notifications
 
@@ -36,12 +36,12 @@ export const markNotificationsRead = async (req, res) => {
 
       if (ids && ids.length > 0) {
         await Notification.updateMany(
-          { _id: { $in: ids }, user: req.user._id },
+          { _id: { $in: ids }, user: req.auth.userId },
           { $set: { read: true } }
         );
       } else {
         await Notification.updateMany(
-          { user: req.user._id, read: false },
+          { user: req.auth.userId, read: false },
           { $set: { read: true } }
         );
       }

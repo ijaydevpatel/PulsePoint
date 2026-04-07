@@ -3,6 +3,30 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 type TokenProvider = () => Promise<string | null>;
 let tokenProvider: TokenProvider | null = null;
 
+/**
+ * Safely parse JSON — if the backend returns HTML (CORS error, 502, 404 page),
+ * throw a descriptive error instead of crashing with "Unexpected token '<'".
+ */
+async function safeJson(response: Response): Promise<any> {
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text().catch(() => 'No response body');
+    let friendlyMessage = 'The Neural Core is currently out of sync.';
+    
+    if (response.status === 404) {
+      friendlyMessage = 'The requested feature is not active. Please restart the backend (node server.js) to synchronize this portal.';
+    } else if (response.status === 500) {
+      friendlyMessage = 'The Neural Core encountered a processing fault. Please check your connection and try again.';
+    }
+
+    const err: any = new Error(friendlyMessage);
+    err.status = response.status;
+    err.technicalPreview = text.slice(0, 120); // Keep technical info hidden in the error object
+    throw err;
+  }
+  return response.json();
+}
+
 export const apiClient = {
   /**
    * Inject a dynamic token provider (e.g. from Clerk)
@@ -16,7 +40,7 @@ export const apiClient = {
     if (tokenProvider) {
       token = await tokenProvider();
     } else if (typeof window !== 'undefined') {
-      token = localStorage.getItem('pulsepo!int_token');
+      token = sessionStorage.getItem('pulsepo!int_token');
     }
 
     return {
@@ -32,8 +56,12 @@ export const apiClient = {
       credentials: 'include',
       headers
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'API Network Get Fault');
+    const data = await safeJson(response);
+    if (!response.ok) {
+      const err: any = new Error(data.message || 'API Network Get Fault');
+      err.status = response.status;
+      throw err;
+    }
     return data;
   },
 
@@ -53,8 +81,12 @@ export const apiClient = {
       body: isFormData ? body : JSON.stringify(body)
     });
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'API Network Post Fault');
+    const data = await safeJson(response);
+    if (!response.ok) {
+      const err: any = new Error(data.message || 'API Network Post Fault');
+      err.status = response.status;
+      throw err;
+    }
     return data;
   },
 
@@ -66,8 +98,12 @@ export const apiClient = {
       headers,
       body: JSON.stringify(body)
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'API Network Put Fault');
+    const data = await safeJson(response);
+    if (!response.ok) {
+      const err: any = new Error(data.message || 'API Network Put Fault');
+      err.status = response.status;
+      throw err;
+    }
     return data;
   },
 
@@ -78,8 +114,12 @@ export const apiClient = {
       credentials: 'include',
       headers
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || 'API Network Delete Fault');
+    const data = await safeJson(response);
+    if (!response.ok) {
+      const err: any = new Error(data.message || 'API Network Delete Fault');
+      err.status = response.status;
+      throw err;
+    }
     return data;
   },
 

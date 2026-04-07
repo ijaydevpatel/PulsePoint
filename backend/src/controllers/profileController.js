@@ -42,7 +42,7 @@ const calculateStreak = (profile) => {
 // @access  Private
 export const getProfile = async (req, res) => {
   try {
-    const profile = await Profile.findOne({ user: req.user._id });
+    const profile = await Profile.findOne({ user: req.auth.userId });
 
     if (profile) {
       res.json(profile);
@@ -70,7 +70,7 @@ export const upsertProfile = async (req, res) => {
     const heightInMeters = height / 100;
     const computedBmi = parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
 
-    let profile = await Profile.findOne({ user: req.user._id });
+    let profile = await Profile.findOne({ user: req.auth.userId });
 
     if (profile) {
       // Update existing
@@ -95,13 +95,13 @@ export const upsertProfile = async (req, res) => {
       const updatedProfile = await profile.save();
       
       // Update global user state tracker
-      await User.findByIdAndUpdate(req.user._id, { profileCompleted: true });
+      await User.findByIdAndUpdate(req.auth.userId, { profileCompleted: true });
 
       res.json(updatedProfile);
     } else {
       // Create new
       profile = new Profile({
-        user: req.user._id,
+        user: req.auth.userId,
         fullName, age, gender, height, weight, bmi: computedBmi,
         bloodGroup, allergies, conditions, medications, emergencyContact, location,
         streak: 1,
@@ -111,7 +111,7 @@ export const upsertProfile = async (req, res) => {
       profile.healthScore = calculateHealthScore(profile);
       await profile.save();
 
-      await User.findByIdAndUpdate(req.user._id, { profileCompleted: true });
+      await User.findByIdAndUpdate(req.auth.userId, { profileCompleted: true });
 
       res.status(201).json(profile);
     }

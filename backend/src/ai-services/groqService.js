@@ -1,114 +1,142 @@
 import fetch from 'node-fetch';
 
 /**
- * Groq LPU Inference Service
- * High-speed cloud alternative for local Ollama models.
+ * PulsePoint Conversational AI (Stage 3)
+ * Optimized for Qwen-3:32B (Ultra-High Speed Chat)
+ * No forced-JSON to ensure fluid, conversational clinical guidance.
  */
-export const callGroq = async (prompt, systemInstruction = '', model = 'qwen/qwen3-32b', temperature = 0.2) => {
+export const generateGroqChat = async (prompt, systemPrompt = "You are PulsePo!int's AI Doctor.") => {
+  const startTime = Date.now();
+  const apiKey = process.env.GROQ_API_KEY;
+  const modelId = "qwen/qwen3-32b";
+
+  if (!apiKey) throw new Error("GROQ_API_KEY missing.");
+
   try {
-    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'gsk_placeholder') {
-      throw new Error('Groq API Key missing or invalid in .env');
-    }
-
-    // Map common names to Groq-specific IDs
-    let groqModelId = model;
-    if (model.toLowerCase().includes('qwen')) groqModelId = 'qwen/qwen3-32b';
-
-    console.log(`[GroqService] Calling Cloud LPU | Model: ${groqModelId}`);
-
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: groqModelId,
+        model: modelId,
         messages: [
-          ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
-          { role: 'user', content: prompt }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
         ],
-        temperature: temperature,
-        max_tokens: 2048
+        temperature: 0.7, // High-entropy for dynamic medical conversation
+        max_tokens: 1024,
+        top_p: 1,
+        stream: false
       })
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Groq API Error: ${error.error?.message || response.statusText}`);
-    }
-
     const data = await response.json();
-    console.log('[GroqService] Raw API Response:', JSON.stringify(data).substring(0, 200));
-    return data.choices[0]?.message?.content || '';
+    if (data.error) throw new Error(`Groq Chat Failure: ${data.error.message}`);
+
+    const generationTime = (Date.now() - startTime) / 1000;
+    return {
+      text: data.choices[0].message.content,
+      generationTime,
+      model: modelId
+    };
   } catch (error) {
-    console.error('[GroqService] Error:', error.message);
+    console.error("[Groq Chat Fault]:", error.message);
     throw error;
   }
 };
 
 /**
- * Groq LPU Streaming Service
+ * PulsePoint Groq Intelligence Service
+ * Optimized for Qwen-3:32B (Ultra-High Speed LPU)
  */
-export const callGroqStream = async (prompt, systemInstruction = '', model = 'qwen/qwen3-32b', onChunk) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      if (!process.env.GROQ_API_KEY) throw new Error('Groq API Key missing');
+export const generateGroqIntelligence = async (prompt, systemPrompt = "You are PulsePo!int's Clinical Intelligence Engine. Provide precise, medical-grade insights.") => {
+  const startTime = Date.now();
+  const apiKey = process.env.GROQ_API_KEY;
+  const modelId = "qwen/qwen3-32b"; // Updated to official Groq clinical ID
 
-      let groqModelId = model;
-      if (model.toLowerCase().includes('qwen')) groqModelId = 'qwen/qwen3-32b';
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is missing from clinical environment.");
+  }
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: groqModelId,
-          messages: [
-            ...(systemInstruction ? [{ role: 'system', content: systemInstruction }] : []),
-            { role: 'user', content: prompt }
-          ],
-          stream: true,
-          temperature: 0.5
-        })
-      });
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.1, // Fixed for high-precision diagnostic extraction
+        response_format: { type: "json_object" }, // Required for Symptoms/Medicine
+        max_tokens: 2048, // Increased for detailed diagnostic
+        top_p: 1,
+        stream: false
+      })
+    });
 
-      if (!response.ok) throw new Error(`Groq Stream Error: ${response.statusText}`);
-
-      // Node-Fetch v3 uses async iterator for body
-      for await (const chunk of response.body) {
-        const lines = chunk.toString().split('\n');
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed === 'data: [DONE]') {
-            if (trimmed === 'data: [DONE]') {
-              onChunk(null);
-              resolve();
-            }
-            continue;
-          }
-          
-          if (trimmed.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(trimmed.slice(6));
-              const text = data.choices[0]?.delta?.content || '';
-              if (text) onChunk(text);
-            } catch (e) {
-              // Partial JSON chunk, ignore or buffer if needed
-            }
-          }
-        }
-      }
-
-      onChunk(null);
-      resolve();
-
-    } catch (error) {
-      console.error('[GroqStream] Error:', error.message);
-      onChunk(null);
-      reject(error);
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error("[Groq Service Error]:", data.error);
+      throw new Error(`Groq Pulse Failure: ${data.error.message}`);
     }
-  });
+
+    const generationTime = (Date.now() - startTime) / 1000;
+    
+    return {
+      text: data.choices[0].message.content,
+      generationTime,
+      model: modelId
+    };
+  } catch (error) {
+    console.error("[Groq Technical Fault]:", error.message);
+    throw error;
+  }
+};
+
+export const callGroq = async (prompt, systemPrompt, model = "qwen/qwen3-32b", temperature = 0.1) => {
+  const startTime = Date.now();
+  const apiKey = process.env.GROQ_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is missing from clinical environment.");
+  }
+
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ],
+        temperature: temperature,
+        response_format: { type: "json_object" },
+        max_tokens: 2048,
+        top_p: 1,
+        stream: false
+      })
+    });
+
+    const data = await response.json();
+    if (data.error) throw new Error(`Groq Pulse Failure: ${data.error.message}`);
+
+    const generationTime = (Date.now() - startTime) / 1000;
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error("[Groq Technical Fault]:", error.message);
+    throw error;
+  }
 };

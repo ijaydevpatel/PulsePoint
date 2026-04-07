@@ -1,9 +1,14 @@
 import Parser from 'rss-parser';
 import * as cheerio from 'cheerio';
+import { generateGroqIntelligence } from '../ai-services/groqService.js';
 
 const parser = new Parser({
   customFields: {
     item: ['description', 'content:encoded', 'enclosure', 'media:content', 'media:thumbnail'],
+  },
+  headers: {
+    'User-Agent': 'PulsePoint-Clinical-Intelligence-Aggr-Bot/1.0',
+    'Accept': 'application/rss+xml, application/xml, text/xml'
   }
 });
 
@@ -29,13 +34,10 @@ const extractImage = (item) => {
   if (!html) return null;
   const $ = cheerio.load(html);
   
-  // Google News RSS puts images in <img> tags inside the description
   const img = $('img').first();
   const src = img.attr('src');
   
-  // Sanitization: Avoid tiny icons or trackers
   if (src && !src.includes('pixel') && !src.includes('tracker') && src.length > 10) {
-    // If it's a relative URL, it's likely broken for external use
     if (src.startsWith('//')) return `https:${src}`;
     if (src.startsWith('http')) return src;
   }
@@ -51,47 +53,42 @@ const getFallbackImage = (title = "", category = "") => {
     if (t.includes('heart') || t.includes('cardiac')) return "https://images.unsplash.com/photo-1536064479547-7ee40b74bb5b?w=600&q=80";
     if (t.includes('doctor') || t.includes('hospital')) return "https://images.unsplash.com/photo-1519494140681-8b17d830a3e9?w=600&q=80";
     if (t.includes('dna') || t.includes('gene')) return "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=600&q=80";
-    return "https://images.unsplash.com/photo-1576091160550-217359f42f8c?w=600&q=80"; // Neutral clinical fallback
+    return "https://images.unsplash.com/photo-1576091160550-217359f42f8c?w=600&q=80"; 
 };
 
 export const getNews = async (req, res) => {
   try {
-    const { q, category } = req.query;
+    const { q } = req.query;
     
-    // SOURCES: Expanded for extreme global density and visual variety
+    // SOURCES: Multi-Node Clinical Distribution (Verified for 2026 Resilience)
     const SOURCES = [
-      { name: "BBC News Health", url: "http://feeds.bbci.co.uk/news/health/rss.xml" },
-      { name: "Medical News Today", url: "https://www.medicalnewstoday.com/rss/headlines.xml" },
-      { name: "Science Daily Health", url: "https://www.sciencedaily.com/rss/top/health.xml" },
-      { name: "Reuters Health", url: "http://feeds.reuters.com/reuters/healthNews" },
-      { name: "WebMD News", url: "https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC" },
-      { name: "CDC Newsroom", url: "https://tools.cdc.gov/api/v2/resources/media/132608.rss" },
-      { name: "WHO Global News", url: "https://www.who.int/rss-feeds/news-english.xml" },
-      { name: "Nature Medicine", url: "https://www.nature.com/nm.rss" },
-      { name: "The Lancet", url: "https://www.thelancet.com/rssfeed/lancet_current.xml" },
-      { name: "NEJM Highlights", url: "https://www.nejm.org/rss/recent_articles.xml" },
-      { name: "Global Health Network", url: `https://news.google.com/rss/search?q=${(q || 'medical+health')+'+medical+research+breakthrough'}&hl=en-US&gl=US&ceid=US:en` }
+      { name: "ScienceDaily Health", url: "https://www.sciencedaily.com/rss/health_medicine.xml" },
+      { name: "KFF Health News", url: "https://kffhealthnews.org/feed/" },
+      { name: "Medical Xpress", url: "https://medicalxpress.com/rss-feed/" },
+      { name: "MedPage Today", url: "https://www.medpagetoday.com/rss/headlines.xml" },
+      { name: "NIH MedlinePlus News", url: "https://medlineplus.gov/rss/newlinks.xml" },
+      { name: "Mayo Clinic Network", url: "https://newsnetwork.mayoclinic.org/feed/" },
+      { name: "BBC World Health", url: "https://feeds.bbci.co.uk/news/health/rss.xml" },
+      { name: "Global Health Intel", url: `https://news.google.com/rss/search?q=${(q || 'medical+health+vaccine+virus+medicine+medical+research+breakthrough')}&hl=en-US&gl=US&ceid=US:en` }
     ];
 
-    const allFeeds = await Promise.all(SOURCES.map(s => parser.parseURL(s.url).catch(() => ({ items: [] }))));
+    console.log(`[NewsController] Aggregating from ${SOURCES.length} nodes...`);
+    const allFeeds = await Promise.all(SOURCES.map(s => parser.parseURL(s.url).catch((err) => {
+        console.warn(`[NewsController] Source Fault [${s.name}]: ${err.message}`);
+        return { items: [] };
+    })));
+
     let items = allFeeds.flatMap((f, i) => f.items.map(item => ({ ...item, sourceBrand: SOURCES[i].name })));
 
-    // 2. Temporal Gating Constants (Inclusive 4-Day Window)
-    const now = new Date();
-    const threshold = new Date();
-    // Inclusive: If today is 29th, show everything from 25th 00:00:00
-    threshold.setDate(now.getDate() - 4);
-    threshold.setHours(0, 0, 0, 0); 
-    const startOf2026 = new Date('2026-01-01');
-
-    // 3. Process and Normalize
+    // Process and Normalize (High-Resolution Pass)
     const processedNews = items.map((item, index) => {
       const titleParts = item.title.split(' - ');
       const source = titleParts.length > 1 ? titleParts.pop() : (item.sourceBrand || "Global Medical Network");
       const title = titleParts.join(' - ');
       
       const imageUrl = extractImage(item);
-      const pubDate = new Date(item.pubDate);
+      const pubDateString = item.pubDate || item.date || item.isoDate;
+      const pubDate = new Date(pubDateString);
 
       let itemCategory = "Global Update";
       const lcTitle = item.title.toLowerCase();
@@ -102,36 +99,81 @@ export const getNews = async (req, res) => {
       return {
         id: `news_${index}_${pubDate.getTime()}_${Math.random().toString(36).substr(2, 5)}`,
         title,
-        snippet: item.contentSnippet?.slice(0, 180).replace(/<\/?[^>]+(>|$)/g, "") || "", // Clean HTML tags
+        snippet: item.contentSnippet?.slice(0, 180).replace(/<\/?[^>]+(>|$)/g, "") || "", 
         source: source.trim(),
-        date: item.pubDate,
+        date: pubDateString,
         link: item.link,
         image: imageUrl || getFallbackImage(title, itemCategory),
         category: itemCategory,
-        timestamp: pubDate.getTime()
+        timestamp: isNaN(pubDate.getTime()) ? Date.now() : pubDate.getTime()
       };
     });
 
-    // 4. Multi-Stage Filtering
-    let filteredNews = processedNews;
+    // Temporal Resilience: 4-Day Freshness Filter with Smart Fallback
+    const now = new Date();
+    const freshnessThreshold = new Date();
+    freshnessThreshold.setDate(now.getDate() - 4);
+    freshnessThreshold.setHours(0, 0, 0, 0);
+
     const seenLinks = new Set();
     const seenTitles = new Set();
-    
-    filteredNews = filteredNews.filter(it => {
-        const titleKey = it.title.toLowerCase().trim().slice(0, 40); // Fuzzy duplicate detection
+    let distinctNews = processedNews.filter(it => {
+        const titleKey = it.title.toLowerCase().trim().slice(0, 40); 
         if (seenLinks.has(it.link) || seenTitles.has(titleKey)) return false;
         seenLinks.add(it.link);
         seenTitles.add(titleKey);
         return true;
     });
 
-    if (!q) {
-      // INCLUSIVE 4-DAY FILTER
-      filteredNews = filteredNews.filter(it => new Date(it.date) >= threshold);
+    let topBriefs = distinctNews
+        .filter(it => it.timestamp >= freshnessThreshold.getTime())
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+    // DYNAMIC FALLBACK: If 4-day window is empty, show top 40 most recent global articles
+    if (topBriefs.length === 0) {
+      console.log(`[NewsController] Primary freshness window empty. Relaxing temporal gating...`);
+      topBriefs = distinctNews
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 40);
+    } else {
+      topBriefs = topBriefs.slice(0, 40);
     }
 
-    filteredNews.sort((a, b) => b.timestamp - a.timestamp);
-    res.json(filteredNews.slice(0, 40)); // Max 40 for High-Density Grid
+    // Neural Intelligence Summaries (Batch-Processed for High-Fidelity HUD)
+    let aiTime = 0;
+    let aiModel = "Qwen-3:32B (Active Summarization)";
+    
+    if (topBriefs.length > 0) {
+      try {
+        console.log(`[NewsController] Generating Batch Neural Summaries for Top 12...`);
+        const batchLines = topBriefs.slice(0, 12).map((it, i) => `${i+1}. ${it.title}`).join('\n');
+        
+        const summarySystemPrompt = "You are PulsePo!int's Medical Research Analyst. Generate a one-sentence clinical summary for each headline. Output strictly line by line corresponding to the input.";
+        const summaryPrompt = `Generate a 1-sentence analytical summary for each of these news items. Focus on 'what is the news about'.\n\nHEADLINES:\n${batchLines}`;
+
+        const aiResult = await generateGroqIntelligence(summaryPrompt, summarySystemPrompt);
+        const summaries = aiResult.text.split('\n').filter(s => s.trim().length > 0).map(s => s.replace(/^\d+\.\s*/, '').trim());
+        
+        aiTime = aiResult.generationTime;
+        aiModel = aiResult.model;
+
+        // Apply AI summaries to the top-tier articles
+        topBriefs.slice(0, 12).forEach((it, i) => {
+            if (summaries[i]) it.snippet = summaries[i];
+        });
+      } catch (aiError) {
+        console.error(`[NewsController] Batch Summarization Fault: ${aiError.message}`);
+      }
+    }
+
+    // Secondary pass: Generate a global briefing for the remainder
+    const neuralBriefing = topBriefs[0]?.snippet || "Intelligence engine re-calibrating global clinical baseline.";
+
+    res.json({
+      news: topBriefs,
+      neuralPulse: { generationTime: aiTime, model: aiModel },
+      neuralBriefing
+    });
 
   } catch (error) {
     console.error("News Aggregation Fault:", error);

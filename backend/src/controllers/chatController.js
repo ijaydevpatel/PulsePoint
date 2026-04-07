@@ -1,4 +1,4 @@
-import { executeModelChain, callGroqStream } from '../model-router/orchestrator.js';
+import { generateGroqIntelligence, generateGroqChat } from '../ai-services/groqService.js';
 import Profile from '../models/Profile.js';
 import ChatSession from '../models/ChatSession.js';
 
@@ -9,60 +9,114 @@ export const sendMessage = async (req, res) => {
   try {
     const { message, sessionId } = req.body;
     if (!message) return res.status(400).json({ message: 'Message Payload Empty' });
-    if (!req.user?._id) return res.status(401).json({ message: 'Unauthorized session.' });
+    if (!req.auth?.userId) return res.status(401).json({ message: 'Unauthorized session.' });
 
-    let profile = await Profile.findOne({ user: req.user._id });
-    
-    // Resilient Fallback: Ensure chat doesn't fail even if profile linkage is pending
+    let profile = await Profile.findOne({ user: req.auth.userId });
     if (!profile) {
-      console.warn(`[ChatEngine] Profile missing for user ${req.user._id}. Using Guest Baseline.`);
+      console.warn(`[ChatEngine] Profile missing for user ${req.auth.userId}. Using Guest Baseline.`);
       profile = { fullName: 'User', age: 30, gender: 'Not Specified' };
     }
 
-    let session;
-    if (sessionId) {
-      session = await ChatSession.findById(sessionId);
-    }
-    
+    let session = sessionId ? await ChatSession.findById(sessionId) : null;
     if (!session) {
-      session = await ChatSession.create({ user: req.user._id, messages: [] });
+      session = await ChatSession.create({ user: req.auth.userId, messages: [] });
     }
 
-    // Determine if this is the first assistant response (Initial user msg = 1)
     const isFirstResponse = session.messages.length === 0;
-
     session.messages.push({ role: 'user', content: message });
     await session.save();
 
-    const systemInstruction = `You are PulsePo!int's Cognitive Diagnostic Partner—a helpful, friendly health guide for non-medical users. 
+    const systemInstruction = `You are PulsePo!int's AI Doctor—a surgical, professional clinical partner.
 Talking to: ${profile.fullName}.
-CRITICAL CONVERSATIONAL RULES:
-${isFirstResponse ? '1. ALWAYS start your response with a unique, interesting, and relatable health fact or physiological insight.\n2. Follow the fact with a warm greeting.' : '1. Provide a warm, brief greeting and skip the initial health fact.'}
-3. Explain medical concepts in plain English using simple analogies.
-4. DO NOT use markdown bolding (no **). DO NOT use markdown italics (no *). All text must be plain.
-5. For numbered lists: Start each item on a NEW LINE. Add a BLANK LINE between each numbered item (double-spacing).
-6. Ask the user what else they want to know at the end of every response.`;
+RULES:
+1. Provide a warm, brief professional greeting (or skip if continuing the conversation).
+2. Explain medical concepts in plain English. Use simple analogies.
+3. NO MARKDOWN BOLDING (**). NO ITALICS (*). Strictly plain text.
+4. Each point starts on a NEW LINE.
+5. Ask one meaningful follow-up question at the end.`;
 
     const promptText = `USER: ${message}\n\nASSISTANT:`;
-    const aiRawReply = await executeModelChain('AI_DOCTOR', promptText, systemInstruction);
-    console.log(`[ChatController] Raw AI Response Length: ${aiRawReply?.length || 0}`);
+    
+    console.log(`[ChatController] Dispatching Qwen-3 Conversational Core...`);
+    let aiResponse;
+    try {
+      aiResponse = await generateGroqChat(promptText, systemInstruction);
+    } catch (llmErr) {
+      console.error('[ChatController] LLM Protocol Fault:', llmErr.message);
+      aiResponse = { text: "Neural synchronization briefly interrupted. How can I assist with your clinical optimization today?", generationTime: 0, model: 'Local Fallback' };
+    }
 
-    // Final Sanitization: Strip all markdown artifacts and ensure plain text
-    // Aggressively trim to remove leading newlines
-    const cleanedReply = aiRawReply
-      .replace(/<think>[\s\S]*?<\/think>/g, '') // Remove reasoning blocks
-      .replace(/```json[\s\S]*?```|```[\s\S]*?```/g, '') // Remove code blocks if model hallucinates them
-      .replace(/\*\*|\*/g, '') // Remove bold/italic artifacts
-      .trim();
-
-    console.log(`[ChatController] Cleaned Reply Length: ${cleanedReply.length}`);
+    // ── FUZZY CLINICAL PARSER (Symptom Tab Logic) ──────────────────────────
+    let cleanedReply = aiResponse.text || "";
+    cleanedReply = cleanedReply.replace(/<think>[\s\S]*?(<\/think>|$)/gi, ''); // Strip thinking
+    cleanedReply = cleanedReply.replace(/\\n/g, '\n'); // Convert literal \n
+    cleanedReply = cleanedReply.replace(/\n{3,}/g, '\n\n'); // Normalize spacing to single empty line
+    cleanedReply = cleanedReply.replace(/\*\*|\*/g, ''); // Strip markdown
+    cleanedReply = cleanedReply.trim();
 
     session.messages.push({ role: 'assistant', content: cleanedReply });
     await session.save();
 
-    res.json({ sessionId: session._id, reply: cleanedReply });
+    res.json({ 
+       sessionId: session._id, 
+       reply: cleanedReply,
+       neuralPulse: { generationTime: aiResponse.generationTime, model: aiResponse.model }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Chat Engine Context Fault', error: error.message });
+    console.error('[Chat Framework Fault]:', error);
+    res.status(500).json({ message: 'The Neural Chat Engine encountered a transient sync fault. Re-establishing link...' });
+  }
+};
+
+// @desc    Generate a dynamic, high-entropy clinical greeting with unique medical fact
+// @route   GET /api/chat/greeting
+// @access  Private
+export const getGreeting = async (req, res) => {
+  try {
+    const systemInstruction = `You are PulsePo!int's Clinical Intelligence Scout.
+Generate a SINGLE, unique, and medically accurate health/physiological fact starting with 'Did you know...' or 'Do you know...'.
+STRICT RULES:
+- The fact MUST be strictly medical or health-related.
+- Use ONE empty line (single paragraph break) to separate the fact from the greeting.
+- At the VERY END, add a GENERAL warm medical partner greeting: 'How can I assist you today?' or 'What can I provide for you today?'.
+- FINALLY, provide 3 SHORT (2-3 words) clinical query suggestions formatted exactly like this:
+SUGGESTIONS: Suggestion 1, Suggestion 2, Suggestion 3
+- NO MARKDOWN BOLDING (**). NO ITALICS (*).
+- Keep it highly variable (high entropy). Avoid common trivia.`;
+
+    const promptText = "Generate a fresh clinical greeting and 3 query suggestions for a new diagnostic session.";
+    
+    console.log(`[ChatGreeting] Syncing with Qwen-3 Conversational Core...`);
+    let aiResponse;
+    try {
+      aiResponse = await generateGroqChat(promptText, systemInstruction);
+    } catch (llmErr) {
+      console.error('[ChatGreeting] LLM Protocol Fault:', llmErr.message);
+      aiResponse = { text: "Did you know that your heart beats over 100,000 times a day?\n\nHow can I assist you today?\nSUGGESTIONS: Stress levels?, HRV trends?, Serum markers?", generationTime: 0, model: 'Local Fallback' };
+    }
+    
+    // ── FUZZY CLINICAL PARSER (Symptom Tab Logic Sync) ───────────────────
+    let cleanedReply = aiResponse.text || "";
+    cleanedReply = cleanedReply.replace(/<think>[\s\S]*?(<\/think>|$)/gi, ''); // Strip thinking
+    cleanedReply = cleanedReply.replace(/\\n/g, '\n'); // Convert literal \n
+    cleanedReply = cleanedReply.replace(/\n{3,}/g, '\n\n'); // Normalize spacing
+    cleanedReply = cleanedReply.replace(/\*\*|\*/g, ''); // Strip markdown
+
+    // Extract Suggestions
+    let suggestions = ["Stress levels?", "HRV trends?", "Serum markers?"];
+    const suggestionMatch = cleanedReply.match(/SUGGESTIONS:\s*(.*)$/im);
+    if (suggestionMatch) {
+       suggestions = suggestionMatch[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
+       cleanedReply = cleanedReply.replace(/SUGGESTIONS:.*$/im, '').trim();
+    }
+
+    res.json({ 
+       greeting: cleanedReply,
+       suggestions,
+       neuralPulse: { generationTime: aiResponse.generationTime, model: aiResponse.model }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Greeting Generation Fault', error: error.message });
   }
 };
 
@@ -70,18 +124,18 @@ export const streamMessage = async (req, res) => {
   try {
     const { message, sessionId } = req.body;
     if (!message) return res.status(400).json({ message: 'Message Payload Empty' });
-    if (!req.user?._id) return res.status(401).json({ message: 'Unauthorized session.' });
+    if (!req.auth?.userId) return res.status(401).json({ message: 'Unauthorized session.' });
 
-    let profile = await Profile.findOne({ user: req.user._id });
+    let profile = await Profile.findOne({ user: req.auth.userId });
     if (!profile) {
-       console.warn(`[ChatEngine] Profile missing for user ${req.user._id} during stream. Using Guest Baseline.`);
+       console.warn(`[ChatEngine] Profile missing for user ${req.auth.userId} during stream. Using Guest Baseline.`);
        profile = { fullName: 'User' };
     }
 
     let session = sessionId ? await ChatSession.findById(sessionId) : null;
     
     if (!session) {
-      session = await ChatSession.create({ user: req.user._id, messages: [] });
+      session = await ChatSession.create({ user: req.auth.userId, messages: [] });
     }
 
     // Context-Aware: 1st message only

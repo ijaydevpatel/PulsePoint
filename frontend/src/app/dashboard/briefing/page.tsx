@@ -3,94 +3,114 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@/context/UserContext";
+import { FeatureShell } from "@/components/dashboard/FeatureShell";
+import { Brain, ArrowLeft, Activity, Info, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, Brain, Activity, ShieldCheck, Pill } from "lucide-react";
 
 export default function BriefingPage() {
   const { profile } = useUser();
   const intel = profile?.intelligence;
 
   return (
-    <div className="w-full h-full flex flex-col pt-4 px-6 pb-12 bg-transparent relative overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center gap-5 mb-8">
-        <Link 
-          href="/dashboard"
-          className="p-3 bg-surface-glass border border-border-glass rounded-full text-text-secondary hover:text-white hover:bg-white/10 transition-colors"
-        >
-          <ArrowLeft size={20} />
+    <FeatureShell
+      title="Intelligence Briefing"
+      subtitle="Deep clinical analysis of your daily health signatures."
+      icon={<Brain size={24} strokeWidth={2.5} />}
+    >
+      <div className="max-w-4xl mx-auto flex flex-col gap-8 pb-20">
+        
+        {/* Back Link */}
+        <Link href="/dashboard" className="flex items-center gap-2 text-primary text-xs font-black uppercase tracking-widest hover:opacity-70 transition-opacity self-start">
+           <ArrowLeft size={14} strokeWidth={3} /> Return to Dashboard
         </Link>
-        <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Clinical Briefing</h1>
-          <p className="text-text-secondary text-sm mt-1 font-medium">
-            Deep neural analysis of your biometric and environmental vectors.
-          </p>
-        </div>
-      </div>
 
-      {!intel ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-text-secondary gap-4">
-          <Brain size={48} className="animate-pulse text-primary/50" />
-          <p className="text-sm font-bold tracking-widest uppercase">Analyzing intelligent matrices...</p>
-        </div>
-      ) : (
+        {/* Hero Card */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          className="bg-primary/5 rounded-[40px] p-8 md:p-12 border border-primary/10 relative overflow-hidden"
         >
-          {/* Main Clinical Concept */}
-          <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 border border-border-glass relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
-                <Brain size={120} />
+           <div className="absolute top-0 right-0 p-8 opacity-[0.03]"><Brain size={300} /></div>
+           <div className="relative z-10 flex flex-col gap-6">
+              <div>
+                <h2 className="text-2xl md:text-5xl font-display font-black text-text-primary tracking-tighter mb-4">
+                  {intel?.education.title || "Neural Education Pulse"}
+                </h2>
+                <p className="text-base md:text-xl text-text-secondary font-semibold leading-relaxed max-w-3xl">
+                  {intel?.education.explanation || "Synchronizing clinical context..."}
+                </p>
               </div>
-              <div className="inline-flex px-3 py-1 bg-primary/20 text-primary rounded-full text-[10px] font-bold uppercase tracking-widest mb-6 border border-primary/30">
-                Primary Insight
+              
+              <div className="h-px w-full bg-primary/10 my-4" />
+              
+              <div>
+                <h4 className="text-[10px] font-black text-primary uppercase tracking-widest mb-4">Neural Synthesis Result</h4>
+                <p className="text-sm md:text-lg text-text-primary font-medium leading-relaxed italic opacity-90">
+                  "{intel?.intelligenceBrief || "Fetching detailed biometric context..."}"
+                </p>
               </div>
-              <h2 className="text-2xl font-black text-white mb-4 leading-tight">
-                {intel.education.title}
-              </h2>
-              <p className="text-text-secondary text-base md:text-lg leading-relaxed font-medium">
-                {intel.education.explanation}
-              </p>
-            </div>
-
-            {/* Current State Analysis */}
-            <div className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 border border-border-glass relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-6 opacity-5">
-                <Activity size={120} />
-              </div>
-              <div className="inline-flex px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-widest mb-6 border border-blue-500/30">
-                System Status
-              </div>
-              <p className="text-white text-lg md:text-xl leading-relaxed font-medium">
-                "{intel.intelligenceBrief}"
-              </p>
-            </div>
-          </div>
-
-          {/* Right Side Micro-Metrics */}
-          <div className="flex flex-col gap-6">
-            
-            <div className="mt-0 p-8 bg-primary/10 rounded-[32px] border border-primary/20 text-left relative overflow-hidden">
-              <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest mb-4">Clinical Deep-Dive Guidance</h4>
-              <p className="text-white font-medium text-lg leading-relaxed">{intel.digitalTwin.medInsight}</p>
-            </div>
-
-            <div className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 border border-border-glass shadow-sm flex flex-col justify-center items-center text-center">
-              <div className="w-16 h-16 rounded-full bg-surface-low border border-surface-container-high flex items-center justify-center mb-4">
-                 <ShieldCheck className="text-accent-green" size={28} />
-              </div>
-              <h4 className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-2">Systems Online</h4>
-              <p className="text-sm text-text-secondary font-medium leading-relaxed">
-                 Your intelligent neural twin is actively monitoring your biomarkers against local environmental signatures.
-              </p>
-            </div>
-            
-          </div>
+           </div>
         </motion.div>
-      )}
-    </div>
+
+        {/* Detailed Insights Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           
+           <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 border border-border-glass shadow-sm flex flex-col gap-4"
+           >
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                 <Activity size={20} />
+              </div>
+              <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Digital Twin Signal</h4>
+              <p className="text-sm font-semibold text-text-primary leading-relaxed">
+                 <span className="opacity-60 block text-[9px] mb-1">PATTERN</span>
+                 {intel?.digitalTwin.pattern || "SteadyState Baseline"}
+              </p>
+              <p className="text-[11px] font-medium text-text-secondary leading-relaxed border-t border-border-glass pt-4 mt-2">
+                 <span className="opacity-60 block text-[9px] mb-1 uppercase">CLINICAL CAUTION</span>
+                 {intel?.digitalTwin.medInsight || "Biological baseline remains within normal parameters."}
+              </p>
+           </motion.div>
+
+           <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-surface-glass backdrop-blur-3xl rounded-[32px] p-8 border border-border-glass shadow-sm flex flex-col gap-4"
+           >
+              <div className="w-10 h-10 rounded-xl bg-accent-orange/10 flex items-center justify-center text-accent-orange">
+                 <ShieldCheck size={20} />
+              </div>
+              <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Risk Projection</h4>
+              <div className="flex flex-col gap-2">
+                 <span className="text-[24px] md:text-[32px] font-display font-black text-text-primary tracking-tighter">
+                   {intel?.digitalTwin.riskTrend || "Stable"}
+                 </span>
+                 <p className="text-[11px] font-medium text-text-secondary leading-relaxed opacity-70">
+                   Trajectory analyzed: No critical variance detected in current biometric stream.
+                 </p>
+              </div>
+           </motion.div>
+
+        </div>
+
+        {/* Footer Info */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-surface-low border border-border-glass"
+        >
+           <Info size={14} className="text-primary" />
+           <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest leading-relaxed">
+             This briefing is generated using the PulsePoint Qwen-3 Research Engine based on your unique biometric signatures.
+           </p>
+        </motion.div>
+
+      </div>
+    </FeatureShell>
   );
 }

@@ -3,17 +3,26 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useUser, UserProfile } from "@/context/UserContext";
-import { Activity, ArrowRight, User, ShieldAlert, HeartPulse, ActivitySquare, ShieldPlus } from "lucide-react";
+import { useUser } from "@/context/UserContext";
+import { Activity, ArrowRight, User, ShieldAlert, HeartPulse, ActivitySquare, ShieldPlus, Camera, Upload } from "lucide-react";
 import { apiClient } from "@/lib/api";
 
 export default function ProfileSetupPage() {
   const router = useRouter();
-  const { saveProfile } = useUser();
+  const { saveProfile, isProfileComplete, isAuthLoaded } = useUser();
   const [loading, setLoading] = useState(false);
+
+  // Strict Exit Pulse: Move to dashboard if identity is already synchronized
+  useEffect(() => {
+    if (isAuthLoaded && isProfileComplete) {
+      console.log("[Auth] Identity already synchronized. Forwarding to Dashboard Core...");
+      router.push("/dashboard");
+    }
+  }, [isAuthLoaded, isProfileComplete, router]);
 
   const [formData, setFormData] = useState({
     fullName: "",
+    profilePicture: "", // Base64 string for initial synchronization
     age: "",
     gender: "Male",
     height: "",
@@ -44,6 +53,17 @@ export default function ProfileSetupPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, profilePicture: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -64,6 +84,7 @@ export default function ProfileSetupPage() {
     try {
       await apiClient.post('/profile', {
         fullName: profile.fullName,
+        profilePicture: formData.profilePicture,
         age: profile.age,
         gender: profile.gender,
         height: profile.height,
@@ -73,7 +94,7 @@ export default function ProfileSetupPage() {
         conditions: profile.conditions,
         medications: profile.medications,
       });
-      saveProfile(profile);
+      saveProfile({ ...profile, profilePicture: formData.profilePicture });
       router.push("/dashboard");
     } catch (err) {
       console.error('Profile save failed:', err);
@@ -82,6 +103,23 @@ export default function ProfileSetupPage() {
       router.push("/dashboard");
     }
   };
+
+  // Loading Pulse: Wait for handshake before rendering setup form
+  if (!isAuthLoaded || (isAuthLoaded && isProfileComplete)) {
+    return (
+      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="absolute top-0 left-0 w-full h-1 bg-primary/20 blur-sm" />
+        <div className="relative mb-8">
+           <div className="w-24 h-24 rounded-[32px] border border-dashed border-primary/20 animate-spin-slow flex items-center justify-center" />
+           <div className="absolute inset-0 flex items-center justify-center text-primary/40">
+              <div className="w-3 h-3 bg-primary rounded-full animate-ping" />
+           </div>
+        </div>
+        <h2 className="text-xl font-display font-black text-white tracking-tighter uppercase mb-2">Neural Synchronizing</h2>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] opacity-50">Checking Identity Registry</p>
+      </div>
+    );
+  }
 
   const containerVariants = {
     hidden: { opacity: 0, x: 20 },
@@ -106,9 +144,31 @@ export default function ProfileSetupPage() {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-accent-crimson" />
 
         <motion.div variants={itemVariants as any} className="flex flex-col items-center mb-10 text-center">
-          <Activity size={48} strokeWidth={2.5} className="text-primary mb-4" />
-          <h1 className="text-3xl font-sans font-bold text-text-primary tracking-tight mb-2">Initialize Profile</h1>
-          <p className="text-sm font-medium text-text-secondary">Complete your neural health record to activate the dashboard system.</p>
+          
+          {/* Profile Picture Upload Section */}
+          <div className="relative mb-6 group">
+             <div className="w-28 h-28 rounded-full border-2 border-dashed border-primary/30 flex items-center justify-center bg-surface-low relative overflow-hidden group-hover:border-primary/60 transition-all duration-300">
+                {formData.profilePicture ? (
+                  <img src={formData.profilePicture} alt="Profile Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={40} className="text-text-secondary/20" />
+                )}
+                
+                <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                   <div className="flex flex-col items-center gap-1">
+                      <Camera size={20} className="text-white" />
+                      <span className="text-[8px] font-black text-white uppercase tracking-widest">Update</span>
+                   </div>
+                   <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                </label>
+             </div>
+             <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white border-4 border-surface-glass shadow-sm">
+                <Upload size={14} strokeWidth={3} />
+             </div>
+          </div>
+
+          <h1 className="text-3xl font-sans font-bold text-text-primary tracking-tight mb-2">Neural Identity Sync</h1>
+          <p className="text-xs font-medium text-text-secondary">Capture your biological signature to initialize the dashboard.</p>
         </motion.div>
 
         <form onSubmit={handleSave} className="flex flex-col gap-6">

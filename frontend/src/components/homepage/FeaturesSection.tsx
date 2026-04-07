@@ -1,5 +1,5 @@
 "use client";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRef } from "react";
 
 const features = [
@@ -16,20 +16,20 @@ export function FeaturesSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   
   return (
-    <section ref={containerRef} className="py-24 px-8 md:px-16 lg:px-24 w-full relative z-10 bg-background-app">
+    <section ref={containerRef} className="pt-16 md:pt-24 pb-12 md:pb-16 px-6 md:px-16 lg:px-24 w-full relative z-10 bg-background-app">
       <div className="max-w-[1400px] mx-auto">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8 }}
-          className="mb-16 text-center md:text-left"
+          className="mb-12 md:mb-16 text-center md:text-left"
         >
-          <span className="text-primary font-bold tracking-[0.2em] uppercase text-xs mb-4 block">Unified Infrastructure</span>
-          <h2 className="text-4xl md:text-6xl font-sans font-extrabold text-text-primary tracking-tight">Intelligence at Scale.</h2>
+          <span className="text-primary font-bold tracking-[0.2em] uppercase text-[10px] md:text-xs mb-3 md:mb-4 block">Unified Infrastructure</span>
+          <h2 className="text-3xl sm:text-4xl md:text-6xl font-sans font-extrabold text-text-primary tracking-tight">Intelligence at Scale.</h2>
         </motion.div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
           {features.map((item, idx) => (
             <motion.div
               key={item.title}
@@ -37,15 +37,14 @@ export function FeaturesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.6, delay: idx * 0.1, type: "spring", stiffness: 100 }}
-              whileHover={{ rotateX: 2, rotateY: -2, y: -5, boxShadow: "0 20px 50px -15px rgba(138, 27, 51, 0.15)" }}
-              className="bg-surface-glass backdrop-blur-xl p-8 rounded-[32px] shadow-soft border border-border-glass transition-all cursor-default relative overflow-hidden group"
+              className="bg-surface-glass backdrop-blur-xl p-6 sm:p-8 rounded-[24px] sm:rounded-[32px] shadow-soft border border-border-glass transition-all cursor-default relative overflow-hidden group"
               style={{ transformStyle: "preserve-3d" }}
             >
-              <div className="text-primary mb-8 bg-primary/5 w-14 h-14 rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300">
+              <div className="text-primary mb-6 md:mb-8 bg-primary/5 w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors duration-300">
                 {item.icon}
               </div>
-              <h3 className="text-xl font-bold text-text-primary mb-3 leading-tight">{item.title}</h3>
-              <p className="text-text-secondary leading-relaxed text-sm font-medium">{item.desc}</p>
+              <h3 className="text-lg sm:text-xl font-bold text-text-primary mb-2 sm:mb-3 leading-tight">{item.title}</h3>
+              <p className="text-text-secondary leading-relaxed text-xs sm:text-sm font-medium">{item.desc}</p>
             </motion.div>
           ))}
         </div>
