@@ -1,64 +1,86 @@
 <div align="center">
 
-  <h1>🫀 PulsePo!int</h1>
-  <h3>— Neural Health Intelligence Ecosystem —</h3>
+<img src="docs/neural_poster.svg" width="100%" alt="PulsePoint Neural Manifesto" />
 
-  [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-  [![Clerk](https://img.shields.io/badge/Clerk-Neural_Auth-6C47FF?style=for-the-badge&logo=clerk&logoColor=white)](https://clerk.com/)
-  [![MongoDB](https://img.shields.io/badge/MongoDB-Clinical_Registry-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-  [![Tailwind](https://img.shields.io/badge/Tailwind-Neural_Night-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+<br />
 
-  <p align="center">
-    <b>PulsePo!int</b> is a premium clinical intelligence architecture designed to synchronize internal biological signatures into a high-fidelity, interactive dashboard. Built with a <b>"Neural-First"</b> design system, it delivers real-time mapping, AI-symptom triage, and secure identity orchestration.
-  </p>
+[![Next.js](https://img.shields.io/badge/Neural_Interface-Next.js-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Clerk](https://img.shields.io/badge/Identity_Core-Clerk-6C47FF?style=for-the-badge&logo=clerk)](https://clerk.com/)
+[![MongoDB](https://img.shields.io/badge/Persistence_Node-MongoDB-47A248?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 
-  [**Explore Live Hub**](#-clinical-architecture) | [**Deploy Manifest**](#-neural-setup) | [**Technical Briefing**](#-identity-handshake)
+---
+
+### // SYSTEM CLASSIFICATION //
+**PulsePo!int** is a high-fidelity clinical health ecosystem designed to orchestrate biological telemetry through deep-neural synchronization. Built for the next era of health forensics, it bridges reactive AI diagnostic pulses with unified identity biometrics.
+
+[**Initialize Registry**](#-neural-protocol) | [**System Blueprint**](#-clinical-anatomy) | [**Identity Handshake**](#-identity-handshake)
 
 </div>
 
 ---
 
-## 🏛️ Clinical Architecture
+## 🏗️ Clinical Anatomy
 
-<div align="center">
-  <img src="docs/assets/actual_hero.png" width="90%" style="border-radius: 12px; border: 1px solid rgba(225, 29, 72, 0.3);" alt="PulsePoint Authentic Hero" />
-</div>
+The PulsePo!int terminal operates on a three-tier **Neural Blueprint**, synchronizing real-time telemetry markers across edge and compute nodes:
 
-### 🧬 Integrated Intelligence
-The PulsePo!int ecosystem is composed of four primary intelligence nodes, each synchronized via our **Neural Middleware**:
+```mermaid
+graph TD
+    subgraph "Identity Edge"
+        Identity[Clerk Neural Core]
+    end
 
-1.  **Medical Mapping Node** — Real-time clinician-grade markers leveraging WebGL.
-2.  **Symptom Intelligence** — AI-driven triage via Groq (Qwen 3-32B).
-3.  **Medicine Synchronization** — Reactive cabinet tracking with neural-pulse scheduling.
-4.  **Neural Identity Hub** — Clerk-powered biometric synchronization at the Edge.
+    subgraph "Logic Compute"
+        Engine[Node.js Pulse Server]
+        Diagnostic1[Groq Symptom Node]
+        Diagnostic2[Gemini Forensic Unit]
+    end
+
+    subgraph "Interface Viewport"
+        HUD[Next.js HUD Terminal]
+        BioMap[GL Clinical Map Node]
+    end
+
+    Identity <==>|Encrypted Handshake| HUD
+    HUD <==>|Biometric Pulse| Engine
+    Engine <==>|Inference Pulse| Diagnostic1
+    Engine <==>|Document Pulse| Diagnostic2
+    Engine <==>|Sync| Registry[(Clinical Persistence Node)]
+```
 
 ---
 
-## 📸 Neural Interface Hub
+## 🧬 Intelligence Nodes
+
+The clinical kernel is modularized into four primary **Intelligence Synchronization Nodes**, each strictly isolated for high-fidelity data extraction:
 
 <div align="center">
-  <img src="docs/assets/actual_home.png" width="90%" style="border-radius: 12px; margin-bottom: 20px;" alt="Neural Dashboard Home" />
-  
-  <p align="center">
-    <b>Neural Intelligence Dashboard:</b> Real-time synchronization of environmental pulses and clinical briefing scores.
-  </p>
-
-  <br />
-
-  <img src="docs/assets/actual_map.png" width="90%" style="border-radius: 12px; margin-bottom: 20px;" alt="Medical Map Interface" />
-
-  <p align="center">
-    <b>Medical Intelligence Map:</b> High-density marker clustering for regional clinical trend analysis.
-  </p>
+  <table border="0">
+    <tr>
+      <td align="center">
+        <img src="docs/intelligence_node.svg" width="280px" />
+        <br /><b>// NODE 01: BIOMETRIC HUD //</b><br />Unified identity registry and biometric handshake.
+      </td>
+      <td align="center">
+        <img src="docs/intelligence_node.svg" width="280px" />
+        <br /><b>// NODE 02: CLINICAL MAP //</b><br />High-density telemetry clustering and trend analysis.
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="docs/intelligence_node.svg" width="280px" />
+        <br /><b>// NODE 03: SYMPTOM ANALYZER //</b><br />Real-time diagnostic triage through neural inference.
+      </td>
+      <td align="center">
+        <img src="docs/intelligence_node.svg" width="280px" />
+        <br /><b>// NODE 04: MEDICINE SYNC //</b><br />Reactive consistency check and scheduled pulses.
+      </td>
+    </tr>
+  </table>
 </div>
 
 ---
 
 ## 🔐 Identity Handshake
-
-<div align="center">
-  <img src="docs/assets/actual_login.png" width="90%" style="border-radius: 12px; border: 1px solid rgba(225, 29, 72, 0.2);" alt="Clerk Identity Portal" />
-</div>
 
 PulsePo!int utilizes a **Zero-Persistence Local State** combined with **Clerk Identity Hub** for maximum clinical security. Every pulse is verified at the Edge before reaching the Neural Core.
 
@@ -73,26 +95,26 @@ export default clerkMiddleware((auth, request) => {
 
 ---
 
-## 🏗️ Neural Setup
+## 🔐 Neural Protocol
 
-Configure your local environment to establish the clinical link:
+To establish a link with the **PulsePo!int Intelligence Registry**, synchronize the following parameters in your local environment.
 
-### [1] Backend Synchronization
-| Secret Key | Clinical Purpose |
-| :--- | :--- |
-| `MONGODB_URI` | Central Neural Registry |
-| `CLERK_SECRET_KEY` | Identity Orchestration Master |
-| `GROQ_API_KEY` | Internal Symptom Triaging Engine |
-| `GEMINI_API_KEY` | Forensic Document Analysis |
+### // REGISTRY PARAMETERS
+| Parameter | Description | Clinical Purpose |
+| :--- | :--- | :--- |
+| `MONGODB_URI` | Data Persistence | Central Clinical Registry |
+| `CLERK_SECRET_KEY` | Identity Link | Master Identity Handshake |
+| `GROQ_API_KEY` | Symptom Inference | Primary Inferential Compute Node |
+| `GEMINI_API_KEY` | Document Logic | Forensic Intelligence Node |
 
-### [2] Deployment Protocol
-1.  **Initialize Registry:** `npm install` (Root Workspace)
-2.  **Synchronize Core:** `cd backend && npm run dev`
-3.  **Initialize Portal:** `cd frontend && npm run dev`
+### // INITIALIZATION SEQUENCE
+1.  **Synchronize Registry:** `npm install`
+2.  **Activate Compute Node:** `cd backend && npm run dev`
+3.  **Activate HUD Terminal:** `cd frontend && npm run dev`
 
 ---
 
 <div align="center">
-  <p><b>Clinical Excellence — PulsePo!int Neural Health Intelligence. 🔐🧪📸🏽‍⚕️</b></p>
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=primary&height=60&section=footer" width="100%" />
+  <p><b>DOCUMENT CLASSIFIED // PULSEPOINT NEURAL MANIFESTO v1.3</b></p>
+  <p><i>Design for the Neural Health Frontier. Strictly Optimized for Clinical Excellence.</i></p>
 </div>
