@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Fingerprint } from "lucide-react";
 import { SignIn } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 
 export default function LoginPage() {
   const containerVariants: any = {
@@ -41,34 +42,43 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Clerk Sign In Hub */}
+        {/* Clerk Sign In Hub - Centered & Neural */}
         <div className="w-full bg-surface-low/50 backdrop-blur-3xl rounded-[48px] border border-surface-container shadow-neural overflow-hidden">
            <SignIn 
             routing="hash"
             signUpUrl="/signup" 
             forceRedirectUrl="/dashboard"
             appearance={{
+              baseTheme: dark,
+              variables: {
+                colorPrimary: "#e11d48",
+                colorBackground: "#0a0a0a",
+                colorText: "#ffffff",
+                colorTextSecondary: "#cbd5e1", // Increased contrast from #94a3b8
+                colorInputBackground: "rgba(255, 255, 255, 0.05)",
+                colorInputText: "#ffffff",
+                borderRadius: "16px",
+              },
               elements: {
-                rootBox: "w-full",
-                card: "bg-transparent shadow-none border-none p-8",
+                rootBox: "w-full mx-auto flex justify-center",
+                cardBox: "w-full shadow-none",
+                card: "bg-transparent shadow-none border-none p-8 w-full max-w-sm",
                 headerTitle: "hidden",
                 headerSubtitle: "hidden",
-                socialButtonsBlockButton: "bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-2xl py-3 transition-all",
-                formButtonPrimary: "bg-primary hover:bg-primary/90 text-white rounded-[20px] py-4 shadow-glow font-black uppercase tracking-widest",
+                socialButtonsBlockButton: "bg-white/5 border-white/10 hover:bg-white/10 !text-white rounded-2xl py-3 transition-all",
+                socialButtonsBlockButtonText: "!text-white font-bold",
+                formButtonPrimary: "bg-primary hover:bg-primary/90 text-white rounded-[20px] py-4 shadow-glow font-black uppercase tracking-widest text-[11px]",
                 formFieldInput: "bg-white/5 border-white/10 text-white rounded-2xl focus:ring-primary/20",
-                footerAction: "hidden",
                 dividerLine: "bg-white/10",
-                dividerText: "text-white/40 uppercase text-[9px] font-black tracking-widest"
+                dividerText: "text-white/40 uppercase text-[9px] font-black tracking-widest",
+                footerActionText: "text-text-secondary font-bold uppercase tracking-widest text-[10px]",
+                footerActionLink: "text-primary hover:text-primary/80 font-black uppercase text-[10px] ml-2",
+                formFieldLabel: "text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2 opacity-70",
+                identityPreviewText: "text-white/60 font-bold",
+                identityPreviewEditButton: "text-primary hover:text-primary/80 font-black uppercase text-[10px]"
               }
             }}
            />
-        </div>
-
-        <div className="mt-10 text-center">
-          <p className="text-xs font-bold text-text-secondary uppercase tracking-widest">
-            New Identity?{" "}
-            <Link href="/signup" className="text-primary font-black ml-2 hover:underline">Register via Clerk</Link>
-          </p>
         </div>
       </motion.div>
     </div>

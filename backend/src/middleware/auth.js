@@ -27,9 +27,10 @@ export const requireAuth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     try {
-      // 2. Clerk Global Verification Handshake
+      // 2. Clerk Global Verification Handshake with Clock Skew Tolerance (10s)
+      // This prevents 'expired' errors during the immediate redirect after signup/login.
       const requestState = await clerkClient.authenticateRequest(req, { 
-        jwtKey: process.env.CLERK_JWT_KEY 
+        clockSkewInMs: 10000 // 10-second leeway for local/cloud timing drifts
       });
 
       // If Clerk identity is verified, extract the userId
@@ -39,7 +40,9 @@ export const requireAuth = async (req, res, next) => {
       }
 
       // Fallback: Verify manually if middleware helper isn't sufficient for specific bearer tokens
-      const sessionClaims = await clerkClient.verifyToken(token);
+      const sessionClaims = await clerkClient.verifyToken(token, {
+        clockSkewInMs: 10000
+      });
       if (sessionClaims?.sub) {
         req.auth = { userId: sessionClaims.sub };
         return next();

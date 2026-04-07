@@ -1,0 +1,22 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="400" fill="#0A0A0A"/>
+  
+  <!-- Neural Pulse Lines -->
+  <path d="M0 200C300 150 600 250 1200 200" stroke="#e11d48" stroke-width="0.5" opacity="0.3"/>
+  <path d="M0 210C300 160 600 260 1200 210" stroke="#e11d48" stroke-width="1.5" opacity="0.1"/>
+  
+  <!-- Medical Hub Icons (Graphic elements) -->
+  <circle cx="600" cy="200" r="80" fill="#e11d48" fill-opacity="0.05" stroke="#e11d48" stroke-width="0.5"/>
+  <circle cx="600" cy="200" r="60" fill="#e11d48" fill-opacity="0.1" stroke="#e11d48" stroke-width="1"/>
+  
+  <!-- Central Pulse Icon (Simplified Brain/Heart) -->
+  <path d="M580 190C580 180 590 170 600 170C610 170 620 180 620 190C620 205 600 220 600 220C600 220 580 205 580 190Z" fill="#e11d48"/>
+  
+  <!-- Poster Typography -->
+  <text x="600" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="42" fill="#FFFFFF" letter-spacing="8">PULSEPOINT</text>
+  <text x="600" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-weight="400" font-size="14" fill="#e11d48" letter-spacing="4" opacity="0.8">// NEURAL HEALTH INTELLIGENCE MANIFEST //</text>
+  
+  <!-- Decorative Meta Grid -->
+  <line x1="100" y1="50" x2="1100" y2="50" stroke="#e11d48" stroke-width="0.5" stroke-dasharray="10 10" opacity="0.2"/>
+  <line x1="100" y1="350" x2="1100" y2="350" stroke="#e11d48" stroke-width="0.5" stroke-dasharray="10 10" opacity="0.2"/>
+</svg>
