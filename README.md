@@ -13,7 +13,7 @@
 ### // SYSTEM CLASSIFICATION //
 **PulsePo!int** is a high-fidelity clinical health ecosystem designed to orchestrate biological telemetry through deep-neural synchronization. Built for the next era of health forensics, it bridges reactive AI diagnostic pulses with unified identity biometrics.
 
-[**Initialize Registry**](#-neural-protocol) | [**System Blueprint**](#-clinical-anatomy) | [**Identity Handshake**](#-identity-handshake)
+[**Initialize Registry**](#️-neural-protocol) | [**System Blueprint**](#️-clinical-anatomy) | [**Identity Handshake**](#-identity-handshake)
 
 </div>
 
@@ -115,6 +115,6 @@ To establish a link with the **PulsePo!int Intelligence Registry**, synchronize 
 ---
 
 <div align="center">
-  <p><b>DOCUMENT CLASSIFIED // PULSEPOINT NEURAL MANIFESTO v1.3</b></p>
+  <p><b>DOCUMENT CLASSIFIED // PULSEPOINT NEURAL MANIFESTO v1.4</b></p>
   <p><i>Design for the Neural Health Frontier. Strictly Optimized for Clinical Excellence.</i></p>
 </div>

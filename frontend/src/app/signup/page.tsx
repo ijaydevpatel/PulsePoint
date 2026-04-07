@@ -33,15 +33,15 @@ export default function SignupPage() {
                 <Activity size={32} strokeWidth={2.5} />
              </div>
           </Link>
-          <h1 className="text-4xl md:text-6xl font-display font-black text-foreground tracking-tighter mb-4 leading-none text-nowrap">
-            New <span className="text-primary italic">Bio-Link</span>
+          <h1 className="text-4xl md:text-5xl font-display font-black text-foreground tracking-tighter mb-4 leading-none text-nowrap">
+            New Bio-Link
           </h1>
           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.4em] opacity-60">
             Initialize Clerk Neural Signature
           </p>
         </div>
 
-        {/* Unified Identity Terminal - Glassmorphism */}
+        {/* Unified Identity Terminal - Solid HUD Architecture */}
         <SignUp 
           routing="hash"
           signInUrl="/login" 
@@ -49,29 +49,30 @@ export default function SignupPage() {
           appearance={{
             variables: {
               colorPrimary: "#e11d48",
-              colorBackground: "transparent",
-              colorText: "var(--foreground)",
-              colorTextSecondary: "var(--muted-foreground)",
-              colorInputBackground: "transparent",
-              colorInputText: "var(--foreground)",
+              colorBackground: "#0a0a0b", // Solid carbon background to prevent split-theme faults
+              colorText: "#ffffff",
+              colorTextSecondary: "#a1a1aa",
+              colorInputBackground: "rgba(255, 255, 255, 0.03)",
+              colorInputText: "#ffffff",
               borderRadius: "16px",
             },
             elements: {
               rootBox: "w-full mx-auto",
               cardBox: "w-full shadow-none",
-              card: "bg-surface-low/30 backdrop-blur-3xl border border-surface-container shadow-neural p-8 md:p-10 w-full rounded-[40px]",
+              card: "bg-[#0a0a0b] border border-white/5 shadow-neural p-8 md:p-10 w-full rounded-[40px] overflow-hidden",
               headerTitle: "hidden",
               headerSubtitle: "hidden",
-              socialButtonsBlockButton: "bg-foreground/5 border-foreground/10 hover:bg-foreground/10 text-foreground rounded-2xl py-3 transition-all",
-              socialButtonsBlockButtonText: "font-bold",
+              socialButtonsBlockButton: "bg-white/5 border-white/10 hover:bg-white/10 text-white rounded-2xl py-3 transition-all",
+              socialButtonsBlockButtonText: "font-bold !text-white",
               formButtonPrimary: "bg-primary hover:bg-primary/90 text-white rounded-[20px] py-4 shadow-glow font-black uppercase tracking-widest text-[11px]",
-              formFieldInput: "bg-foreground/5 border-foreground/10 text-foreground rounded-2xl focus:ring-primary/20",
-              dividerLine: "bg-foreground/10",
-              dividerText: "text-foreground/40 uppercase text-[10px] font-black tracking-[0.2em] px-4",
+              formFieldInput: "bg-white/5 border-white/10 text-white rounded-2xl focus:ring-primary/20",
+              dividerLine: "bg-white/10",
+              dividerText: "!text-white/40 uppercase text-[10px] font-black tracking-[0.2em] px-4",
+              footer: "bg-[#0a0a0b] !mt-0 !pt-2", // Force background contiguousness
               footerActionText: "!text-white/60 font-bold uppercase tracking-widest text-[10px]",
               footerActionLink: "!text-primary hover:text-primary/80 font-black uppercase text-[10px] ml-2",
-              formFieldLabel: "text-foreground/80 text-[10px] font-black uppercase tracking-[0.2em] mb-2",
-              identityPreviewText: "text-foreground/60 font-bold",
+              formFieldLabel: "text-white/80 text-[10px] font-black uppercase tracking-[0.2em] mb-2",
+              identityPreviewText: "text-white/60 font-bold",
               identityPreviewEditButton: "text-primary hover:text-primary/80 font-black uppercase text-[10px]"
             }
           }}
