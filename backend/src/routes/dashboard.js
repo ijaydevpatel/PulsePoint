@@ -1,5 +1,5 @@
 import express from 'express';
-import { User } from '../models/User.js';
+import Profile from '../models/Profile.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateGroqIntelligence } from '../ai-services/groqService.js';
 
@@ -7,9 +7,10 @@ const router = express.Router();
 
 router.get('/intel', requireAuth, async (req, res) => {
   const { lat, lon } = req.query;
-  const user = await User.findOne({ _id: req.auth.userId }) || { fullName: "User" };
 
   try {
+    const user = await Profile.findOne({ user: req.auth.userId }) || { fullName: "Active User", bmi: 0, conditions: [] };
+    
     // 1. Fetch OSINT (Weather/AQI) - Static fallback
     let osint = { aqi: 38, uv: 5, humidity: 62, location: { lat: lat || 0, lon: lon || 0 }, locationName: "Neural Node Alpha" };
 
