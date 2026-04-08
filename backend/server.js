@@ -29,15 +29,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl) or allowed domains
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`[CORS Blocked]: Attempted pulse from unauthorized domain: ${origin}`);
-      callback(new Error('CORS identity mismatch'));
-    }
-  },
+  origin: true, // Allow all origins to resolve dynamic Vercel prod/preview URLs
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
