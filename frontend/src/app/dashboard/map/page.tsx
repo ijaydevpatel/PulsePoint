@@ -451,7 +451,7 @@ export default function MapPage() {
          </div>
       </div>
 
-      <div className="hidden md:flex fixed bottom-10 right-10 z-[150]">
+      <div className="flex fixed bottom-[90px] right-4 md:bottom-10 md:right-10 z-[150]">
          <button onClick={onSynchronize} disabled={isSyncing} className="w-14 h-14 bg-surface-glass/80 backdrop-blur-3xl border border-border-glass rounded-full shadow-float flex items-center justify-center text-primary group active:scale-95 transition-all pointer-events-auto shadow-neutral-blue focus:outline-none shadow-neutral">
             {isSyncing ? <Loader2 size={24} className="animate-spin" /> : <LocateFixed size={26} />}
          </button>
