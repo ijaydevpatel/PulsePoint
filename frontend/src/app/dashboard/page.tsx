@@ -122,8 +122,8 @@ export default function DashboardPage() {
       {/* Title Section */}
       <motion.div variants={headerVariants} className="flex flex-col gap-1">
         <div className="flex flex-row items-center justify-between w-full gap-4">
-          <h1 className="text-[28px] md:text-3xl lg:text-5xl font-display font-black text-text-primary tracking-tighter leading-tight">
-            Welcome back, {displayName?.split(" ")[0] || "User"}.
+          <h1 className="text-[28px] md:text-3xl lg:text-5xl font-display font-black text-text-primary tracking-tighter leading-tight normal-case">
+            Welcome back, {displayName ? displayName.split(" ")[0].charAt(0).toUpperCase() + displayName.split(" ")[0].slice(1).toLowerCase() : "User"}.
           </h1>
 
           {/* Neural Sync HUD Mirror - Relocated to fully Right side */}
