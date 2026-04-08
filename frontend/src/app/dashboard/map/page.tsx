@@ -164,16 +164,26 @@ export default function MapPage() {
     return (R * c).toFixed(1);
   };
 
-  const scanClinicalNodes = useCallback(async (mapInstance: any) => {
+  const scanClinicalNodes = useCallback(async (mapInstance: any, centerOverride?: [number, number]) => {
     if (!mapInstance || isScanningRef.current) return;
     isScanningRef.current = true;
     setIsScanning(true);
     
     try {
-      const bounds = mapInstance.getBounds();
-      const sw = bounds.getSouthWest();
-      const ne = bounds.getNorthEast();
-      const bbox = `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+      let bbox = "";
+      
+      if (centerOverride) {
+        // PRECISION MODE: Create a high-density 3km scan around the targeted center
+        const lat = centerOverride[1];
+        const lng = centerOverride[0];
+        const offset = 0.015; // Approx 1.5km padding
+        bbox = `${lat - offset},${lng - offset},${lat + offset},${lng + offset}`;
+      } else {
+        const bounds = mapInstance.getBounds();
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        bbox = `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+      }
       
       const query = `
         [out:json][timeout:35];
@@ -246,7 +256,10 @@ export default function MapPage() {
          mapInstance.getSource('clinical-infrastructure').setData({ type: 'FeatureCollection', features });
       }
 
-      setInfrastructure(currentNodes.slice(0, 500));
+      // SYNC: Sort by physical proximity (closest first)
+      const sortedNodes = [...currentNodes].sort((a, b) => parseFloat(a.dist) - parseFloat(b.dist));
+
+      setInfrastructure(sortedNodes.slice(0, 500));
       setTimeout(checkLabelCollisions, 800);
 
     } catch(err) {
@@ -384,14 +397,18 @@ export default function MapPage() {
        try {
          const lib = await import("maplibre-gl");
          const maplibregl = lib.default || lib;
-         if (userMarker.current) { userMarker.current.setLngLat(userPos); } else {
-           const el = createIdentityMarker();
-           userMarker.current = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(userPos).addTo(map.current);
-         }
-         map.current.flyTo({ center: userPos, zoom: 16, duration: 2500, pitch: 65 });
-         setTimeout(() => { if (map.current) scanClinicalNodes(map.current); }, 2700);
-       } catch(e) {}
-    };
+          if (userMarker.current) { userMarker.current.setLngLat(userPos); } else {
+            const el = createIdentityMarker();
+            userMarker.current = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(userPos).addTo(map.current);
+          }
+          map.current.flyTo({ center: userPos, zoom: 16, duration: 2500, pitch: 65 });
+          
+          // IMMEDIATE SYNC: Re-align the scanner to the exact GPS center immediately
+          scanClinicalNodes(map.current, userPos);
+          
+          setTimeout(() => { if (map.current) scanClinicalNodes(map.current); }, 2700);
+        } catch(e) {}
+     };
     syncIdentityHub();
   }, [userPos, scanClinicalNodes]);
 
