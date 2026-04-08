@@ -1,5 +1,5 @@
 import express from 'express';
-import { User } from '../models/User.js';
+import Profile from '../models/Profile.js';
 import { requireAuth } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -10,11 +10,11 @@ const router = express.Router();
  */
 router.get('/profile', requireAuth, async (req, res) => {
   try {
-    // Neural Link: Identify user via Clerk ID
-    const user = await User.findOne({ clerkId: req.auth.userId });
+    // Neural Link: Identify user via unique Identity String
+    const user = await Profile.findOne({ user: req.auth.userId });
     
     if (!user) {
-      console.log(`[Neural Link] Profile not initialized for Clerk ID: ${req.auth.userId}`);
+      console.log(`[Neural Link] Profile not initialized for Identity: ${req.auth.userId}`);
       return res.status(404).json({ message: 'Neural profile not initialized.' });
     }
     
@@ -48,12 +48,12 @@ router.post('/profile', requireAuth, async (req, res) => {
     const heightInMeters = height / 100;
     const bmiValue = heightInMeters > 0 ? (weight / (heightInMeters * heightInMeters)).toFixed(1) : 0;
 
-    // Pulse-Sync: Reconcile Clerk Identity with Clinical Data
-    const user = await User.findOneAndUpdate(
-      { clerkId: req.auth.userId },
+    // Pulse-Sync: Reconcile Identity with Clinical Profile repository
+    const user = await Profile.findOneAndUpdate(
+      { user: req.auth.userId },
       { 
         $set: {
-          clerkId: req.auth.userId, // Explicitly set for upsert
+          user: req.auth.userId, 
           fullName, 
           age, 
           gender, 
@@ -63,8 +63,7 @@ router.post('/profile', requireAuth, async (req, res) => {
           allergies, 
           conditions, 
           medications,
-          bmi: parseFloat(bmiValue),
-          lastActive: Date.now()
+          bmi: parseFloat(bmiValue)
         }
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -82,9 +81,9 @@ router.post('/profile', requireAuth, async (req, res) => {
  */
 router.get('/settings', requireAuth, async (req, res) => {
   try {
-    const user = await User.findOne({ clerkId: req.auth.userId });
+    const user = await Profile.findOne({ user: req.auth.userId });
     if (!user) return res.status(404).json({ message: 'Settings node unavailable.' });
-    res.json(user.settings);
+    res.json(user.settings || { theme: 'dark', notificationsEnabled: true });
   } catch (error) {
     res.status(500).json({ message: 'Neural configuration error.' });
   }
@@ -97,8 +96,8 @@ router.put('/settings', requireAuth, async (req, res) => {
       updateObj[`settings.${key}`] = req.body[key];
     });
 
-    const user = await User.findOneAndUpdate(
-      { clerkId: req.auth.userId },
+    const user = await Profile.findOneAndUpdate(
+      { user: req.auth.userId },
       { $set: updateObj },
       { new: true }
     );
