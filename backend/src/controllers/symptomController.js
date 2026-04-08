@@ -74,7 +74,7 @@ TREATMENT GUIDELINES:
 TASK: Analyze the symptoms and predict EXACTLY 5 probable conditions. 
 
 PROBABILITY MATRIX RULES (CRITICAL/CAPS):
-- STICTLY USE RESEARCH ENGINE: qwen/qwen3-32b.
+- STICTLY USE RESEARCH ENGINE: qwen3-32b.
 - YOU MUST RETURN EXACTLY 5 ITEMS IN THE "probabilityMatrix".
 - 3 ITEMS: MUST BE "Common/Normal" conditions (Cold, Flu, etc.).
 - 2 ITEMS: MUST BE "Serious/Critical" conditions (Meningitis, Cardiac, etc.).
@@ -94,7 +94,7 @@ JSON SCHEMA (STRICT):
   "summaryText": "A LONG DETAILED PARAGRAPH (6-8 sentences) synthesis of the diagnostic matrix."
 }
 
-Respond with JSON ONLY. Utilitize Research model: qwen/qwen3-32b.`;
+Respond with JSON ONLY. Utilitize Research model: qwen3-32b.`;
 
     const promptText = `Selected UI Symptoms: ${activeSymptoms.join(', ')}. NLP Text: ${customSymptom}`;
 

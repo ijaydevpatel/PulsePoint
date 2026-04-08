@@ -37,8 +37,7 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "gemin
   const startTime = Date.now();
   const apiKey = process.env.GEMINI_API_KEY;
   
-  // Model Mapping: Ensure 3 alias points to the preview series as requested
-  const modelId = targetModel.includes('3') ? 'gemini-3-flash-preview' : targetModel;
+  const modelId = targetModel;
 
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is missing from clinical environment.");

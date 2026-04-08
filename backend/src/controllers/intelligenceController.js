@@ -93,7 +93,7 @@ export const getIntelligence = async (req, res) => {
             }
         `;
 
-        const responseText = await callGroq(prompt, "You are a specialized medical intelligence extraction engine.", "qwen/qwen3-32b", 0.1);
+        const responseText = await callGroq(prompt, "You are a specialized medical intelligence extraction engine.", "qwen3-32b", 0.1);
         
         let intelligence;
         try {

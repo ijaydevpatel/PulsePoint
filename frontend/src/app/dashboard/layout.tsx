@@ -11,7 +11,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "@/components/core/ThemeProvider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { profile, logout, isAuthenticated, isAuthLoaded, isProfileComplete, displayName } = useUser();
+  const { profile, logout, isAuthenticated, isAuthLoaded, isProfileComplete, displayName, syncStatus } = useUser();
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
@@ -19,16 +19,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isAnalyzerPage = pathname === "/dashboard/report";
   
   // SYNC: Profile Completion Protection
-  // Note: Basic authentication is now handled at the Edge via middleware.ts
   useEffect(() => {
-    if (!isAuthLoaded) return; 
+    // Only proceed once authentication and profile sync attempt are fully settled
+    if (!isAuthLoaded || !isAuthenticated) return; 
     
-    // Redirect uninitialized biological profiles to Setup Portal
-    if (isAuthenticated && !isProfileComplete && pathname !== "/profile-setup") {
-      console.log("[Identity Sync] Incomplete clinical profile detected. Redirecting to Setup...");
+    // REDIRECT PROTOCOL: Only push to setup if we are CERTAIN the profile is missing (synced + !complete)
+    // We explicitly avoid redirecting if the syncStatus is 'error' (Handshake 401)
+    if (syncStatus === 'synced' && !isProfileComplete && pathname !== "/profile-setup" && !profile) {
+      console.log("[Identity Sync] Verified uninitialized profile. Redirecting to Setup...");
       router.push("/profile-setup");
     }
-  }, [isAuthLoaded, isAuthenticated, isProfileComplete, router, pathname]);
+  }, [isAuthLoaded, isAuthenticated, isProfileComplete, profile, syncStatus, router, pathname]);
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);

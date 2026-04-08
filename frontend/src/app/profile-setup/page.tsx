@@ -94,13 +94,14 @@ export default function ProfileSetupPage() {
         conditions: profile.conditions,
         medications: profile.medications,
       });
+      // ONLY synchronize locally and forward IF the server handshake succeeded
       saveProfile({ ...profile, profilePicture: formData.profilePicture });
       router.push("/dashboard");
-    } catch (err) {
-      console.error('Profile save failed:', err);
-      // Still save locally as fallback
-      saveProfile(profile);
-      router.push("/dashboard");
+    } catch (err: any) {
+      console.error('Identity Synchronization Failed:', err);
+      setLoading(false);
+      // DO NOT redirect to dashboard if the server rejected the identity signature (401)
+      alert(`Synchronisation Failed: ${err.message || "Identity handshake rejected by server."}`);
     }
   };
 

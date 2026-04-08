@@ -1,71 +1,58 @@
-import { createClerkClient } from '@clerk/backend';
+import { verifyToken } from '@clerk/backend';
 
-// Initialize the Clerk Neural Identity Handshake
-const clerkClient = createClerkClient({ 
-  secretKey: process.env.CLERK_SECRET_KEY,
-  publishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY 
-});
+// Startup environment check
+if (!process.env.CLERK_SECRET_KEY) {
+  console.error('[Identity Core Fault]: CLERK_SECRET_KEY is undefined. All handshakes will fail.');
+} else {
+  console.log('[Identity Core] Clerk Secret Key loaded. Neural Handshake ready.');
+}
 
 /**
- * Unified Clerk Authentication Middleware
- * Replaces legacy JWT architecture with the Clerk Neural Identity Protocol.
- * Extracts the session token from the Authorization header and verifies identity.
+ * PulsePoint Identity Middleware — Production Grade
+ * 
+ * Uses Clerk's verifyToken() directly with the Bearer token from the
+ * Authorization header. This is the correct approach for Express servers
+ * since authenticateRequest() requires a Web API Request object.
  */
 export const requireAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
-    // 1. Bearer Protocol Check
+
     if (!authHeader?.startsWith('Bearer ')) {
-      console.warn('[Handshake Rejected]: Missing Clerk Authorization Header.');
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'MissingIdentity',
-        message: 'No biological authorization token provided.'
+        message: 'No authorization token provided. Please sign in.'
       });
     }
 
     const token = authHeader.split(' ')[1];
 
-    try {
-      // 2. Clerk Global Verification Handshake with Clock Skew Tolerance (10s)
-      // This prevents 'expired' errors during the immediate redirect after signup/login.
-      const requestState = await clerkClient.authenticateRequest(req, { 
-        clockSkewInMs: 10000 // 10-second leeway for local/cloud timing drifts
-      });
+    // Directly verify the Clerk session JWT — the correct approach for Express
+    const sessionClaims = await verifyToken(token, {
+      secretKey: process.env.CLERK_SECRET_KEY,
+      clockSkewInMs: 60000 // 60s tolerance for network latency
+    });
 
-      // If Clerk identity is verified, extract the userId
-      if (requestState.isSignedIn) {
-        req.auth = { userId: requestState.toAuth().userId };
-        return next();
-      }
-
-      // Fallback: Verify manually if middleware helper isn't sufficient for specific bearer tokens
-      const sessionClaims = await clerkClient.verifyToken(token, {
-        clockSkewInMs: 10000
-      });
-      if (sessionClaims?.sub) {
-        req.auth = { userId: sessionClaims.sub };
-        return next();
-      }
-
-    } catch (tokenErr) {
-      console.warn('[Handshake Warning] Clerk Identity Verification failed:', tokenErr.message);
-      return res.status(401).json({ 
-        error: 'InvalidIdentity',
-        message: 'Your neural link has expired. Please re-authenticate via Clerk.'
+    if (!sessionClaims?.sub) {
+      return res.status(401).json({
+        error: 'InvalidToken',
+        message: 'Session token is invalid or expired. Please sign in again.'
       });
     }
-    
-    return res.status(401).json({ error: 'AuthFailure', message: 'Identity handshake validation incomplete' });
-    
+
+    req.auth = { userId: sessionClaims.sub };
+    return next();
+
   } catch (error) {
-    console.error('[Handshake Critical Protocol Fault]:', error);
-    return res.status(500).json({ 
-      error: 'ProtocolFault',
-      message: 'Server identity check failed.'
+    console.error('[Handshake Fault]:', error.message);
+    return res.status(401).json({
+      error: 'AuthFailure',
+      message: 'Identity handshake validation incomplete. Your session has expired.',
+      diagnostic: error.message
     });
   }
 };
 
-// High-Fidelity Alias for Route Compatibility
+// Alias for route compatibility
 export const protect = requireAuth;
+

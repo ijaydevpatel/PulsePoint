@@ -60,6 +60,7 @@ interface UserContextType {
   saveProfile: (data: UserProfile) => void;
   sessionError: string | null;
   clerkUser: any;
+  syncStatus: 'idle' | 'syncing' | 'synced' | 'error';
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -71,6 +72,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
   const [sessionError, setSessionError] = useState<string | null>(null);
 
   const sanitizeProfile = (p: any): UserProfile => ({
@@ -93,7 +95,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     if (isSignedIn) {
       apiClient.setTokenProvider(async () => {
         try {
-          return await getToken();
+          // Force fresh token to prevent 'Neural link expired' errors due to cached/stale sessions
+          return await getToken({ skipCache: true });
         } catch (e) {
           console.error("[Neural Link] Token Handshake Fault:", e);
           return null;
@@ -132,16 +135,18 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setProfile(null);
       setIsProfileComplete(false);
       setIsAuthLoaded(true);
+      setSyncStatus('idle');
       return;
     }
 
     const fetchProfile = async () => {
       setIsAuthLoaded(false); 
+      setSyncStatus('syncing');
 
-      // Neural Handshake Timeout
+      // Neural Handshake Timeout for profile extraction
       const timeoutId = setTimeout(() => {
         setIsAuthLoaded(true);
-        console.warn("[Neural Handshake] Profile extraction timeout stalling. Bypassing lock.");
+        console.warn("[Neural Handshake] Profile extraction stalling. Bypassing lock.");
       }, 5000);
 
       try {
@@ -150,18 +155,28 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           const sanitized = sanitizeProfile(data);
           setProfile(sanitized);
           setIsProfileComplete(true);
+          setSyncStatus('synced');
           setSessionError(null);
         } else {
+          // Successful handshake but profile is uninitialized (200 OK + null)
           setIsProfileComplete(false);
+          setSyncStatus('synced');
         }
       } catch (error: any) {
         if (error.status === 401) {
-           console.warn("[Neural Handshake] Identity mismatch. Re-authenticating Clerk...");
+          console.error("[Identity Handshake] Protocol failed (401). Preserving existing session state.");
+          setSyncStatus('error');
+          setSessionError("Identity Handshake Failure");
+          // CRITICAL: Do not set isProfileComplete to false here. 
+          // An auth failure is NOT a "missing profile" condition.
         } else if (error.status === 404) {
-          console.log("[Neural Link] Biological profile not yet initialized.");
+          console.info("[Identity Sync] Biological profile not yet initialized (404).");
           setIsProfileComplete(false);
+          setSyncStatus('synced');
+          setProfile(null);
         } else {
-          console.error("[Neural Hub] Extraction error:", error);
+          console.error("[Identity Hub] Extraction fault:", error);
+          setSyncStatus('error');
         }
       } finally {
         clearTimeout(timeoutId);
@@ -183,8 +198,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     logout,
     saveProfile,
     sessionError,
-    clerkUser
-  }), [isSignedIn, isClerkLoaded, isAuthLoaded, isProfileComplete, profile, displayName, logout, saveProfile, sessionError, clerkUser]);
+    clerkUser,
+    syncStatus
+  }), [isSignedIn, isClerkLoaded, isAuthLoaded, isProfileComplete, profile, displayName, logout, saveProfile, sessionError, clerkUser, syncStatus]);
 
   return (
     <UserContext.Provider value={value}>

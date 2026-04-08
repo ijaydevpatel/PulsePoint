@@ -100,4 +100,63 @@
   .shadow-glow {
     box-shadow: 0 0 40px rgba(138, 27, 51, 0.15);
   }
+
+  /* Exhaustive Clerk Transparency Overrides */
+  .cl-rootBox, 
+  .cl-card, 
+  .cl-main, 
+  .cl-footer, 
+  .cl-footerAction, 
+  .cl-identityPreview,
+  [class*="cl-footer"],
+  [class*="cl-card"],
+  [class*="cl-main"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Force Remove Development Badges */
+  .cl-internal-badge,
+  .cl-badge,
+  .cl-internal-ph72j1, /* Current Clerk Development Badge Text Hash */
+  .cl-internal-1dauv92, /* Forced Visibility: Secured By Clerk Branding (Dark Mode) */
+  [data-theme='dark'] .cl-internal-1scxde7,
+  [data-theme='dark'] [class*="1scxde7"] {
+    filter: invert(1) !important;
+    opacity: 0.8 !important;
+    transition: opacity 0.3s ease;
+  }
+
+  [data-theme='dark'] .cl-internal-1scxde7:hover {
+    opacity: 1 !important;
+  }
+
+  /* Global Backstop for OTP/2FA Visibility */
+  [data-theme='dark'] .cl-otpCodeFieldInput {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+  }
+
+  [class*="cl-internal-badge"],
+  [class*="cl-badge"],
+  [class*="ph72j1"],
+  [class*="1dauv92"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Preserve Button/Input Visibility */
+  .cl-formButtonPrimary, 
+  .cl-socialButtonsBlockButton, 
+  .cl-formFieldInput {
+    /* These should keep their defined backgrounds from the elements prop */
+  }
 }

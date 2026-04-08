@@ -70,7 +70,7 @@ export const checkMedicineCompatibility = async (req, res) => {
 
     const systemInstruction = `You are a Senior Research Clinical Pharmacist (PULSEPO!NT PHARMACORE ENGINE). 
 You MUST respond with ONLY a valid JSON object. 
-Strictly utilize the Research model ID: qwen/qwen3-32b.
+Strictly utilize the Research model ID: qwen3-32b.
 
 LANGUAGE & TONE RULES (MANDATORY):
 - Use EXACTLY 50% medical clinical language and 50% simple normal language for everything else.
@@ -111,7 +111,7 @@ JSON SCHEMA:
   "safeAlternatives": ["Clinical Alternative 1", "Clinical Alternative 2"],
   "warnings": ["Clinical Warning 1", "Clinical Warning 2"]
 }
-Respond with JSON ONLY. Utilitize Research model: qwen/qwen3-32b.`;
+Respond with JSON ONLY. Utilitize Research model: qwen3-32b.`;
 
     const promptText = `TECHNICAL LABEL AUDIT:
 Agent A: ${med1}
