@@ -73,7 +73,7 @@ export const generateGroqIntelligence = async (prompt, systemPrompt = "You are P
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt }
         ],
-        temperature: 0.1, // Fixed for high-precision diagnostic extraction
+        temperature: 1.0, // Clinical maximum for dynamic intelligence extraction
         response_format: { type: "json_object" }, // Required for Symptoms/Medicine
         max_tokens: 2048, // Increased for detailed diagnostic
         top_p: 1,
@@ -101,7 +101,7 @@ export const generateGroqIntelligence = async (prompt, systemPrompt = "You are P
   }
 };
 
-export const callGroq = async (prompt, systemPrompt, model = "qwen/qwen3-32b", temperature = 0.1) => {
+export const callGroq = async (prompt, systemPrompt, model = "qwen/qwen3-32b", temperature = 1.0) => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
 

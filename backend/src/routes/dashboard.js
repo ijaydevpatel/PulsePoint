@@ -18,6 +18,18 @@ router.get('/intel', requireAuth, async (req, res) => {
     const selectedFocus = healthFoci[Math.floor(Math.random() * healthFoci.length)];
     const neuralPulseId = Date.now().toString(16);
 
+    const now = new Date();
+    const staleThreshold = 30 * 60 * 1000; // 30 Minute Neural Session
+
+    if (user.cachedIntelligence && user.lastIntelUpdate && (now - new Date(user.lastIntelUpdate) < staleThreshold)) {
+      console.log(`[Dashboard] Serving Cached Intelligence (Age: ${Math.round((now - new Date(user.lastIntelUpdate))/1000)}s)`);
+      return res.json({ 
+        intelligence: user.cachedIntelligence, 
+        osint, 
+        neuralPulse: { generationTime: 0, model: "Neural Cache" } 
+      });
+    }
+
     // Live Intelligence Briefing powered by Groq Qwen-3:32B
     console.log(`[Dashboard] Syncing with Groq Qwen-3 Intelligence (Pulse: ${neuralPulseId})...`);
     const prompt = `
@@ -28,7 +40,7 @@ router.get('/intel', requireAuth, async (req, res) => {
       Priority Focus: ${selectedFocus}
       
       Generate a precise PulsePo!int clinical intelligence summary in STRICT JSON format. 
-      CRITICAL: This content MUST be unique and significantly different from any previous sessions. 
+      CRITICAL: Use high entropy (Temperature 1.0). This content MUST be unique.
       Focus specifically on the ${selectedFocus} aspect of the user's digital twin today.
       
       {
@@ -52,12 +64,21 @@ router.get('/intel', requireAuth, async (req, res) => {
 
     const { text, generationTime, model } = await generateGroqIntelligence(prompt);
     
-    // Fuzzy JSON Extraction to prevent "Neural intelligence extraction failed"
+    // Fuzzy JSON Extraction
     let intel;
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : text;
       intel = JSON.parse(jsonStr);
+      
+      // PERSIST: Cache the result for subsequent logins/refreshes
+      await Profile.findOneAndUpdate(
+        { user: req.auth.userId },
+        { 
+          cachedIntelligence: intel,
+          lastIntelUpdate: new Date()
+        }
+      );
     } catch (parseErr) {
       console.error('[Dashboard Intel Parse Error]:', parseErr);
       throw new Error('Fuzzy extraction failure');

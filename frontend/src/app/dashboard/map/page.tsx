@@ -57,8 +57,11 @@ export default function MapPage() {
 
           label.style.visibility = 'visible';
           
-          // Only perform collision hiding on Desktop to avoid "missing labels" on small mobile screens
-          if (isMobile) return; 
+          // STRICT MOBILE PROTECTION: Always show labels on mobile to avoid 'missing list' perception
+          if (isMobile) {
+            label.style.display = 'block';
+            return;
+          } 
 
           const rect = label.getBoundingClientRect();
           let isOverlapping = false;
@@ -338,10 +341,42 @@ export default function MapPage() {
   const onSynchronize = () => {
     if (!map.current || isSyncing) return;
     setIsSyncing(true);
+    
+    const geoOptions = { 
+      enableHighAccuracy: true, 
+      timeout: 15000, // Increased for mobile reliability
+      maximumAge: 0 
+    };
+
     if (typeof window !== "undefined" && navigator.geolocation) {
-       navigator.geolocation.getCurrentPosition((pos) => { setUserPos([pos.coords.longitude, pos.coords.latitude]); setIsSyncing(false); }, () => { setIsSyncing(false); }, { enableHighAccuracy: true, timeout: 5000 });
+       navigator.geolocation.getCurrentPosition(
+         (pos) => { 
+           setUserPos([pos.coords.longitude, pos.coords.latitude]); 
+           setIsSyncing(false); 
+         }, 
+         (err) => { 
+           console.warn("High Accuracy Pulse Failed, attempting balanced sync...", err);
+           // Fallback to balanced accuracy if high fidelity fails or times out
+           navigator.geolocation.getCurrentPosition(
+             (pos) => {
+               setUserPos([pos.coords.longitude, pos.coords.latitude]);
+               setIsSyncing(false);
+             },
+             () => { setIsSyncing(false); },
+             { enableHighAccuracy: false, timeout: 10000 }
+           );
+         }, 
+         geoOptions
+       );
     } else { setIsSyncing(false); }
   };
+
+  // SYNC: Force-Scan infrastructure when Mobile Drawer opens to ensure list is never empty
+  useEffect(() => {
+    if (isMobileDrawerOpen && map.current) {
+      scanClinicalNodes(map.current);
+    }
+  }, [isMobileDrawerOpen, scanClinicalNodes]);
 
   useEffect(() => {
     if (!map.current || !userPos) return;

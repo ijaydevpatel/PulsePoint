@@ -77,7 +77,15 @@ const profileSchema = new mongoose.Schema({
     content: String,
     severity: String,
     date: { type: Date, default: Date.now }
-  }]
+  }],
+  cachedIntelligence: {
+    type: Object,
+    default: null
+  },
+  lastIntelUpdate: {
+    type: Date,
+    default: null
+  }
 }, {
   timestamps: true,
 });
