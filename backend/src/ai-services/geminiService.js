@@ -10,14 +10,14 @@ export const generateDualStageAnalysis = async (files, visionPrompt, synthesisPr
   
   // STAGE 1: Clinical Extraction (High Fidelity Vision)
   console.log(`[Neural Pipeline] Starting Stage 1: Clinical Extraction (Gemini 2.5)...`);
-  const extraction = await generateGeminiAnalysis(files, visionPrompt, "gemini-2.5-flash");
+  const extraction = await generateGeminiAnalysis(files, visionPrompt, "Gemini 2.5 Flash");
   
   // STAGE 2: Pathological Synthesis (Advanced Reasoning)
   console.log(`[Neural Pipeline] Starting Stage 2: Pathological Synthesis (Gemini 3)...`);
   const fullSynthesisPrompt = `${synthesisPrompt}\n\n[EXTRACTED CLINICAL DATA FROM STAGE 1]:\n${extraction.text}`;
   
   // Call Gemini 3 for final synthesis (no files needed, pure reasoning)
-  const synthesis = await generateGeminiAnalysis([], fullSynthesisPrompt, "gemini-3-flash-preview");
+  const synthesis = await generateGeminiAnalysis([], fullSynthesisPrompt, "Gemini 3 Flash");
   
   const totalTime = (Date.now() - startTime) / 1000;
   
@@ -33,7 +33,7 @@ export const generateDualStageAnalysis = async (files, visionPrompt, synthesisPr
  * PulsePoint Gemini Vision Core
  * Optimized for Gemini 2.5 (Fidelity) & 3 Flash (Speed/Preview)
  */
-export const generateGeminiAnalysis = async (files, prompt, targetModel = "gemini-2.5-flash") => {
+export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemini 2.5 Flash") => {
   const startTime = Date.now();
   const apiKey = process.env.GEMINI_API_KEY;
   

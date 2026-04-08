@@ -163,7 +163,7 @@ ${isFirstResponse ? '1. ALWAYS start your response with a unique, interesting, a
     let accumulatedContent = '';
     let isFirstVisibleChunk = true;
 
-    await callGroqStream(promptText, systemInstruction, 'qwen/qwen3-32b', (chunk) => {
+    await callGroqStream(promptText, systemInstruction, 'qwen3-32b', (chunk) => {
       if (chunk === null) {
         session.messages.push({ role: 'assistant', content: accumulatedContent });
         session.save().catch(e => console.error('[Stream] Session save error:', e));

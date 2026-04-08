@@ -8,7 +8,7 @@ import fetch from 'node-fetch';
 export const generateGroqChat = async (prompt, systemPrompt = "You are PulsePo!int's AI Doctor.") => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
-  const modelId = "qwen/qwen3-32b";
+  const modelId = "qwen3-32b";
 
   if (!apiKey) throw new Error("GROQ_API_KEY missing.");
 
@@ -54,7 +54,7 @@ export const generateGroqChat = async (prompt, systemPrompt = "You are PulsePo!i
 export const generateGroqIntelligence = async (prompt, systemPrompt = "You are PulsePo!int's Clinical Intelligence Engine. Provide precise, medical-grade insights.") => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
-  const modelId = "qwen/qwen3-32b"; // Updated to official Groq clinical ID
+  const modelId = "qwen3-32b"; // Updated to official Groq clinical ID
 
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is missing from clinical environment.");
@@ -101,7 +101,7 @@ export const generateGroqIntelligence = async (prompt, systemPrompt = "You are P
   }
 };
 
-export const callGroq = async (prompt, systemPrompt, model = "qwen/qwen3-32b", temperature = 0.1) => {
+export const callGroq = async (prompt, systemPrompt, model = "qwen3-32b", temperature = 0.1) => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
 
