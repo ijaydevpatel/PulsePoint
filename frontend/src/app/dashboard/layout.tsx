@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Dash Content Area */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden ${isMapPage ? 'pt-0 pb-0' : 'pt-16 lg:pt-24 pb-16'} ${isMapPage || isAnalyzerPage ? 'px-0' : 'px-4 lg:px-8'}`}>
+        <div className={`flex-1 flex flex-col h-full overflow-hidden ${isMapPage ? 'pt-0 pb-0' : 'pt-16 lg:pt-24 pb-0'} ${isMapPage || isAnalyzerPage ? 'px-0' : 'px-4 lg:px-8'}`}>
           {children}
         </div>
       </main>

@@ -13,11 +13,12 @@ interface FeatureShellProps {
     generationTime: number;
     model: string;
   };
+  fullHeight?: boolean;
 }
 
-export function FeatureShell({ title, subtitle, icon, children, noPadding = false, neuralPulse }: FeatureShellProps) {
+export function FeatureShell({ title, subtitle, icon, children, noPadding = false, neuralPulse, fullHeight = false }: FeatureShellProps) {
   return (
-    <div className={`pt-1 px-4 pb-4 md:p-8 lg:p-10 ${noPadding ? 'pb-0' : 'pb-3 md:pb-4'} flex flex-col w-full min-w-0`}>
+    <div className={`pt-1 px-4 ${noPadding ? 'pb-0' : 'pb-3 md:pb-4'} flex flex-col w-full min-w-0 ${fullHeight ? 'h-full flex-1 overflow-hidden' : ''}`}>
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
@@ -61,7 +62,7 @@ export function FeatureShell({ title, subtitle, icon, children, noPadding = fals
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className="flex-1 w-full"
+        className={`flex-1 w-full ${fullHeight ? 'h-full flex flex-col' : ''}`}
       >
         {children ? children : (
             <div className="bg-surface-low/30 backdrop-blur-3xl h-full rounded-[32px] border border-surface-container flex flex-col items-center justify-center text-center p-8 md:p-16 lg:p-20 shadow-sm">

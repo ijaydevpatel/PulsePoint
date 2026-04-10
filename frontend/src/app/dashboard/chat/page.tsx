@@ -128,6 +128,7 @@ export default function ChatPage() {
       subtitle="AI Clinical Intelligence" 
       icon={<MessageSquare size={24} />}
       neuralPulse={undefined}
+      fullHeight={true}
     >
       {/* Surgical Viewport Lock: Kill outer scrolls & Theme Chat Scrollbar */}
       <style jsx global>{`
@@ -153,7 +154,7 @@ export default function ChatPage() {
         }
       `}</style>
 
-      <div className="flex flex-col h-[calc(100dvh-280px)] md:h-[calc(100vh-160px)] w-full overflow-hidden relative transition-all duration-500">
+      <div className="flex flex-col h-full w-full overflow-hidden relative transition-all duration-500">
         
         {/* Chat Header Utility - Borderless */}
         <div className="px-8 py-4 flex items-center justify-between shrink-0">
@@ -218,17 +219,17 @@ export default function ChatPage() {
         </div>
 
         {/* Input Dock - Pinned to Bottom with Breathing Space */}
-        <div className="px-6 md:px-8 py-3 md:py-4 pb-4 md:pb-12 shrink-0 bg-background-app/40 backdrop-blur-3xl border-t border-border-glass/10">
+        <div className="px-6 md:px-8 py-3 md:py-4 pb-6 md:pb-12 shrink-0 bg-background-app/40 backdrop-blur-3xl border-t border-border-glass/10 mt-auto">
            <div className="max-w-4xl mx-auto relative group">
               
               {/* Instagram Floating Pill Input */}
-              <div className="relative flex items-center gap-3 bg-surface-glass border border-border-glass rounded-[40px] p-2 pl-8 focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5 transition-all shadow-neural-lg backdrop-blur-3xl">
+              <div className="relative flex items-center gap-2 md:gap-3 bg-surface-glass border border-border-glass rounded-[40px] p-1.5 md:p-2 pl-6 md:pl-8 focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5 transition-all shadow-neural-lg backdrop-blur-3xl">
                 <input 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder="Ask your biological diagnostic partner..."
-                  className="flex-1 bg-transparent py-3 md:py-4 text-sm font-bold text-text-primary focus:outline-none placeholder:text-text-secondary/40"
+                  className="flex-1 bg-transparent py-2 md:py-4 text-sm font-bold text-text-primary focus:outline-none placeholder:text-text-secondary/40"
                 />
                 
                 <div className="flex items-center gap-2 pr-2">
