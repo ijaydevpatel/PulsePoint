@@ -17,13 +17,13 @@ interface FeatureShellProps {
 
 export function FeatureShell({ title, subtitle, icon, children, noPadding = false, neuralPulse }: FeatureShellProps) {
   return (
-    <div className={`p-4 md:p-8 lg:p-10 ${noPadding ? 'pb-0' : 'pb-3 md:pb-4'} flex flex-col w-full min-w-0`}>
+    <div className={`pt-1 px-4 pb-4 md:p-8 lg:p-10 ${noPadding ? 'pb-0' : 'pb-3 md:pb-4'} flex flex-col w-full min-w-0`}>
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         whileInView={{ opacity: 1, x: 0 }}
         viewport={{ once: true }}
-        className="flex items-center gap-4 mb-8 md:mb-10"
+        className="flex items-center gap-4 mb-2 md:mb-10"
       >
         <div className="p-3 md:p-4 rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-sm shrink-0">
           {icon}
