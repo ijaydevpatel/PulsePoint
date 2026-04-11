@@ -62,7 +62,7 @@ export function FeatureShell({ title, subtitle, icon, children, noPadding = fals
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ delay: 0.2, duration: 0.5 }}
-        className={`flex-1 w-full ${fullHeight ? 'h-full flex flex-col' : ''}`}
+        className={`flex-1 w-full ${fullHeight ? 'h-full flex flex-col overflow-hidden' : ''}`}
       >
         {children ? children : (
             <div className="bg-surface-low/30 backdrop-blur-3xl h-full rounded-[32px] border border-surface-container flex flex-col items-center justify-center text-center p-8 md:p-16 lg:p-20 shadow-sm">

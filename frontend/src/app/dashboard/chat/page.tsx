@@ -80,6 +80,29 @@ export default function ChatPage() {
     };
   }, []);
 
+  // Mobile Viewport Height Fix: Use visualViewport API to get real available height
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    if (!isMobile) return;
+
+    const setMobileVH = () => {
+      const vh = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty('--chat-mobile-vh', `${vh}px`);
+    };
+
+    setMobileVH();
+    window.visualViewport?.addEventListener('resize', setMobileVH);
+    window.addEventListener('resize', setMobileVH);
+    window.addEventListener('orientationchange', setMobileVH);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', setMobileVH);
+      window.removeEventListener('resize', setMobileVH);
+      window.removeEventListener('orientationchange', setMobileVH);
+      document.documentElement.style.removeProperty('--chat-mobile-vh');
+    };
+  }, []);
+
   const handleSend = async (textOverride?: string) => {
     const messageText = textOverride || input;
     if (!messageText.trim() || isTyping) return;
@@ -137,6 +160,27 @@ export default function ChatPage() {
           height: 100% !important;
         }
 
+        /* === MOBILE-ONLY CHAT VIEWPORT FIX === */
+        @media (max-width: 1023px) {
+          /* Force the entire chat shell to use real mobile viewport height */
+          .chat-mobile-shell {
+            height: calc(var(--chat-mobile-vh, 100dvh) - 64px) !important;
+            max-height: calc(var(--chat-mobile-vh, 100dvh) - 64px) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+
+          /* Input dock: always visible at bottom with safe-area + breathing room */
+          .chat-input-dock {
+            position: sticky !important;
+            bottom: 0 !important;
+            flex-shrink: 0 !important;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+            z-index: 50 !important;
+          }
+        }
+
         /* Medical Scrollbar Theme */
         .chat-scrollbar::-webkit-scrollbar {
           width: 5px;
@@ -154,7 +198,7 @@ export default function ChatPage() {
         }
       `}</style>
 
-      <div className="flex flex-col h-full w-full overflow-hidden relative transition-all duration-500">
+      <div className="chat-mobile-shell flex flex-col h-full w-full overflow-hidden relative transition-all duration-500">
         
         {/* Chat Header Utility - Borderless */}
         <div className="px-8 py-4 flex items-center justify-between shrink-0">
@@ -219,7 +263,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input Dock - Pinned to Bottom with Breathing Space */}
-        <div className="px-6 md:px-8 py-3 md:py-4 pb-6 md:pb-12 shrink-0 bg-background-app/40 backdrop-blur-3xl border-t border-border-glass/10 mt-auto">
+        <div className="chat-input-dock px-6 md:px-8 py-3 md:py-4 pb-6 md:pb-12 shrink-0 bg-background-app/40 backdrop-blur-3xl border-t border-border-glass/10 mt-auto">
            <div className="max-w-4xl mx-auto relative group">
               
               {/* Instagram Floating Pill Input */}
