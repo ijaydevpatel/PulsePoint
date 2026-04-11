@@ -232,7 +232,7 @@ export default function ChatPage() {
         {/* Message Area - Expansive */}
         <div 
           ref={scrollRef}
-          className="chat-messages-area flex-1 min-h-0 overflow-y-auto chat-scrollbar px-6 py-4 md:px-10 md:py-8 space-y-6"
+          className="chat-messages-area flex-1 min-h-0 overflow-y-auto chat-scrollbar px-6 pt-2 pb-4 md:px-10 md:pt-4 md:pb-8 space-y-6"
         >
           <AnimatePresence>
             {messages.map((m) => (
