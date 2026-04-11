@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       
       {/* App Shell Core */}
-      <main className={`flex-1 flex flex-col relative transition-all duration-300 ${isMapPage ? 'lg:ml-0' : 'lg:ml-[84px]'} w-full min-w-0 overflow-x-hidden overflow-y-auto text-left`}>
+      <main className={`flex-1 flex flex-col relative transition-all duration-300 ${isMapPage ? 'lg:ml-0' : 'lg:ml-[84px]'} w-full min-w-0 overflow-hidden text-left`}>
         
         {/* Floating HUD Layer (Desktop Only) */}
         <header className={`hidden lg:flex fixed top-6 inset-x-8 h-12 items-center justify-between z-[100] shrink-0 pointer-events-none ${isMapPage ? 'pl-20' : 'pl-0'}`}>
