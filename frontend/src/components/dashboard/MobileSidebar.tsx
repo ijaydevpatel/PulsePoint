@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -26,6 +26,36 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, logout, displayName } = useUser();
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Mobile Viewport Height Fix: Same WhatsApp/Telegram approach as chat
+  useEffect(() => {
+    if (!isOpen) return;
+    const panel = sidebarRef.current;
+    if (!panel) return;
+
+    const updateHeight = () => {
+      const h = window.innerHeight;
+      panel.style.height = `${h}px`;
+      panel.style.maxHeight = `${h}px`;
+    };
+
+    updateHeight();
+    const t1 = setTimeout(updateHeight, 50);
+    const t2 = setTimeout(updateHeight, 350);
+
+    window.addEventListener('resize', updateHeight);
+    window.addEventListener('orientationchange', updateHeight);
+    window.visualViewport?.addEventListener('resize', updateHeight);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener('resize', updateHeight);
+      window.removeEventListener('orientationchange', updateHeight);
+      window.visualViewport?.removeEventListener('resize', updateHeight);
+    };
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -46,7 +76,8 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed inset-y-0 left-0 w-[300px] bg-background-app z-[201] flex flex-col lg:hidden shadow-2xl h-full"
+            className="fixed top-0 left-0 w-[300px] bg-background-app z-[201] flex flex-col lg:hidden shadow-2xl overflow-hidden"
+            ref={sidebarRef}
           >
             {/* Header */}
             <div className="h-[72px] px-6 flex items-center justify-between border-b border-surface-container shrink-0">
@@ -96,7 +127,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             </nav>
 
             {/* Footer Actions */}
-            <div className="p-4 bg-surface-low/30 border-t border-surface-container shrink-0 space-y-2">
+            <div className="p-4 bg-surface-low/30 border-t border-surface-container shrink-0 space-y-2" style={{ paddingBottom: `calc(16px + env(safe-area-inset-bottom, 0px))` }}>
               <button
                 onClick={() => { onClose(); router.push('/dashboard/settings'); }}
                 className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-text-secondary hover:bg-surface-low hover:text-text-primary transition-all"
