@@ -20,6 +20,7 @@ export default function ChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [neuralPulse, setNeuralPulse] = useState<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Greeting: Fetch on mount
   useEffect(() => {
@@ -80,7 +81,46 @@ export default function ChatPage() {
     };
   }, []);
 
+  // Mobile Chat Height: WhatsApp/Telegram approach - measure actual position, set exact pixel height
+  useEffect(() => {
+    const container = chatContainerRef.current;
+    if (!container) return;
 
+    const updateMobileHeight = () => {
+      // Only run on mobile
+      if (window.innerWidth >= 1024) {
+        container.style.removeProperty('height');
+        container.style.removeProperty('max-height');
+        return;
+      }
+      // Measure how far down the container starts, then fill to bottom of visible viewport
+      const rect = container.getBoundingClientRect();
+      const available = window.innerHeight - rect.top;
+      container.style.height = `${available}px`;
+      container.style.maxHeight = `${available}px`;
+    };
+
+    // Run immediately + after framer-motion animation settles
+    updateMobileHeight();
+    const t1 = setTimeout(updateMobileHeight, 50);
+    const t2 = setTimeout(updateMobileHeight, 350);
+    const t3 = setTimeout(updateMobileHeight, 700);
+
+    window.addEventListener('resize', updateMobileHeight);
+    window.addEventListener('orientationchange', updateMobileHeight);
+    window.visualViewport?.addEventListener('resize', updateMobileHeight);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener('resize', updateMobileHeight);
+      window.removeEventListener('orientationchange', updateMobileHeight);
+      window.visualViewport?.removeEventListener('resize', updateMobileHeight);
+      container.style.removeProperty('height');
+      container.style.removeProperty('max-height');
+    };
+  }, []);
 
   const handleSend = async (textOverride?: string) => {
     const messageText = textOverride || input;
@@ -139,22 +179,20 @@ export default function ChatPage() {
           height: 100% !important;
         }
 
-        /* === MOBILE-ONLY: FIXED INPUT DOCK (Bulletproof) === */
+        /* === MOBILE-ONLY: WhatsApp/Telegram Flexbox Layout === */
         @media (max-width: 1023px) {
-          /* Input dock: position:fixed always pins to real visible viewport */
-          .chat-input-dock {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)) !important;
-            z-index: 9999 !important;
-            background: var(--color-background-app) !important;
+          /* Messages area: shrinkable flex child */
+          .chat-messages-area {
+            min-height: 0 !important;
+            flex: 1 1 0% !important;
+            overflow-y: auto !important;
           }
 
-          /* Message area needs bottom padding so content isn't hidden behind fixed dock */
-          .chat-messages-area {
-            padding-bottom: 110px !important;
+          /* Input dock: stays at natural flex bottom, never fixed */
+          .chat-input-dock {
+            flex-shrink: 0 !important;
+            padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+            padding-top: 10px !important;
           }
         }
 
@@ -175,7 +213,7 @@ export default function ChatPage() {
         }
       `}</style>
 
-      <div className="flex flex-col h-full w-full overflow-hidden relative transition-all duration-500">
+      <div ref={chatContainerRef} className="flex flex-col h-full w-full overflow-hidden relative">
         
         {/* Chat Header Utility - Borderless */}
         <div className="px-8 py-4 flex items-center justify-between shrink-0">
@@ -194,7 +232,7 @@ export default function ChatPage() {
         {/* Message Area - Expansive */}
         <div 
           ref={scrollRef}
-          className="chat-messages-area flex-1 overflow-y-auto chat-scrollbar px-6 py-8 md:px-10 space-y-6"
+          className="chat-messages-area flex-1 min-h-0 overflow-y-auto chat-scrollbar px-6 py-4 md:px-10 md:py-8 space-y-6"
         >
           <AnimatePresence>
             {messages.map((m) => (
@@ -240,11 +278,11 @@ export default function ChatPage() {
         </div>
 
         {/* Input Dock - Pinned to Bottom with Breathing Space */}
-        <div className="chat-input-dock px-6 md:px-8 py-3 md:py-4 pb-6 md:pb-12 shrink-0 bg-background-app/40 backdrop-blur-3xl border-t border-border-glass/10 mt-auto">
+        <div className="chat-input-dock px-4 md:px-8 py-2 md:py-4 pb-3 md:pb-12 shrink-0 bg-background-app/80 backdrop-blur-3xl border-t border-border-glass/10">
            <div className="max-w-4xl mx-auto relative group">
               
-              {/* Instagram Floating Pill Input */}
-              <div className="relative flex items-center gap-2 md:gap-3 bg-surface-glass border border-border-glass rounded-[40px] p-1.5 md:p-2 pl-6 md:pl-8 focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5 transition-all shadow-neural-lg backdrop-blur-3xl">
+              {/* Pill Input */}
+              <div className="relative flex items-center gap-2 md:gap-3 bg-surface-glass border border-border-glass rounded-full p-1 md:p-2 pl-5 md:pl-8 focus-within:border-primary/40 focus-within:ring-8 focus-within:ring-primary/5 transition-all shadow-neural-lg backdrop-blur-3xl">
                 <input 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -257,9 +295,9 @@ export default function ChatPage() {
                    <button 
                     onClick={() => handleSend()}
                     disabled={!input.trim() || isTyping}
-                    className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-glow hover:brightness-110 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shrink-0"
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-glow hover:brightness-110 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shrink-0"
                    >
-                     <Send size={18} strokeWidth={3} />
+                     <Send size={16} strokeWidth={3} />
                    </button>
                 </div>
               </div>
