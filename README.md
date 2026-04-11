@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:202020,100:0055FF&height=250&section=header&text=PulsePoint&fontSize=80&fontAlignY=35&animation=twinkling&fontColor=ffffff" width="100%" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:202020,100:0055FF&height=250&section=header&text=PulsePo%21int&fontSize=80&fontAlignY=35&fontColor=ffffff" width="100%" />
 
 **Next-Generation Clinical Intelligence & Neural Diagnostics Platform**
 <br/>
@@ -31,31 +31,37 @@
 
 <br/>
 
-> **PulsePoint** is not just another medical application; it's a meticulously crafted intelligence platform. It strictly adheres to a "Clinical Aesthetic" design language—leveraging pristine glassmorphism, responsive 3D data visualization, and zero-latency real-time neural diagnostics to provide an unmatched, premium health triage experience.
+> **PulsePo!int** is not just another medical application; it's a meticulously crafted intelligence platform. It strictly adheres to a "Clinical Aesthetic" design language—leveraging pristine glassmorphism, responsive 3D data visualization, and zero-latency real-time neural diagnostics to provide an unmatched, premium health triage experience.
 
 <br/>
 
-## ✨ Core Features & Intelligence
+## ✨ Core Platform Functionality
+
+This application provides the following end-to-end medical features for users:
 
 <table align="center" width="100%">
   <tr>
-    <td width="50%" valign="top">
-      <h3 align="center">🧠 Neural Consult Dashboard</h3>
-      <p>A production-grade, immersive AI chat dashboard designed with sophisticated micro-animations and zero-latency data streaming. The AI engine parses symptoms in real-time, enforcing a robust triage methodology to ensure maximum clinical accuracy.</p>
+    <td width="33%" valign="top">
+      <h3 align="center">🩺 Symptoms Analyzer</h3>
+      <p align="center">Input your physical symptoms to instantly receive an AI-driven, 1-100% severity triage breakdown highlighting potential conditions.</p>
     </td>
-    <td width="50%" valign="top">
-      <h3 align="center">🧬 Diagnostic Intelligence Layer</h3>
-      <p>Powered by <b>Google Generative AI</b> and ultra-fast inference via <b>Groq</b>, combined with a proprietary fuzzy-logic JSON extraction tool. Generates strict diagnostic frameworks including dynamic probability percentages, consistently highlighting a 3+2 matrix (3 common, 2 serious conditions).</p>
+    <td width="33%" valign="top">
+      <h3 align="center">⚕️ AI Chat Doctor</h3>
+      <p align="center">Engage in continuous, real-time conversations with our Neural Consult AI to discuss health queries and receive guided medical intelligence.</p>
+    </td>
+    <td width="33%" valign="top">
+      <h3 align="center">📑 Report Analyzer</h3>
+      <p align="center">Upload your raw PDFs and sprawling medical records. Our system instantly parses, summarizes, and extracts critical health data.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <h3 align="center">🗺️ Geographic Route & Triage</h3>
-      <p>Interactive spatial mapping driven by Leaflet and MapLibre GL for tracking localized symptom hubs, optimal routing algorithms to nearby care facilities, and displaying vital geo-medical data seamlessly alongside 3D Canvas elements.</p>
+      <h3 align="center">🗺️ Medical Map Tracker</h3>
+      <p align="center">Interactive geographic routing and visualization to help locate nearby care facilities, pharmacies, and the most relevant local health hubs.</p>
     </td>
     <td width="50%" valign="top">
-      <h3 align="center">🔐 Native Identity Protocol</h3>
-      <p>A highly secure, self-contained authentication flow driven by <b>Clerk</b>. Integrating deeply with unified backend routing to ensure all clinical portals are reliably sealed, hyper-fast, and universally accessible.</p>
+      <h3 align="center">💊 Medicine & Treatment Guide</h3>
+      <p align="center">Get preliminary insights on potential medications, actionable home care steps, and post-diagnostic guidance seamlessly integrated.</p>
     </td>
   </tr>
 </table>
@@ -64,7 +70,7 @@
 
 ## 📐 The "Clinical Aesthetic" Design System
 
-PulsePoint refuses to settle for standard, uninspired components. The UI architecture is built entirely on a custom design system characterized by:
+PulsePo!int refuses to settle for standard, uninspired components. The UI architecture is built entirely on a custom design system characterized by:
 
 - 🪞 **Glassmorphism & Depth:** Theme-aware, frosted transparent overlays offering layered depth and a sterile, premium feel.
 - 📱 **Dynamic Viewport Scaling:** Pixel-perfect mobile responsiveness utilizing dynamic viewport height (`100dvh`) and custom bottom docks to seamlessly bridge mobile and desktop experiences without layout cropping.
@@ -139,7 +145,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 
 ## 🚀 Deployment & Initialization
 
-Deploying the PulsePoint workspace requires initializing both the orchestrated backend service and the frontend dashboard layer. 
+Deploying the PulsePo!int workspace requires initializing both the orchestrated backend service and the frontend dashboard layer. 
 
 ### 1. Initialize the Neural Layer (Backend)
 ```bash
@@ -158,6 +164,8 @@ npm run dev
 <br/>
 
 <div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:202020,100:0055FF&height=100&section=footer" width="100%" />
 
 ---
 <i>Engineered for health. Designed with absolute precision.</i>
