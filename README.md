@@ -41,17 +41,13 @@ This application provides the following end-to-end medical features for users:
 
 <table align="center" width="100%">
   <tr>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <h3 align="center">🩺 Symptoms Analyzer</h3>
       <p align="center">Input your physical symptoms to instantly receive an AI-driven, 1-100% severity triage breakdown highlighting potential conditions.</p>
     </td>
-    <td width="33%" valign="top">
+    <td width="50%" valign="top">
       <h3 align="center">⚕️ AI Chat Doctor</h3>
       <p align="center">Engage in continuous, real-time conversations with our Neural Consult AI to discuss health queries and receive guided medical intelligence.</p>
-    </td>
-    <td width="33%" valign="top">
-      <h3 align="center">📑 Report Analyzer</h3>
-      <p align="center">Upload your raw PDFs and sprawling medical records. Our system instantly parses, summarizes, and extracts critical health data.</p>
     </td>
   </tr>
   <tr>
@@ -62,6 +58,12 @@ This application provides the following end-to-end medical features for users:
     <td width="50%" valign="top">
       <h3 align="center">💊 Medicine & Treatment Guide</h3>
       <p align="center">Get preliminary insights on potential medications, actionable home care steps, and post-diagnostic guidance seamlessly integrated.</p>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top">
+      <h3 align="center">📑 Report Analyzer</h3>
+      <p align="center">Upload your raw PDFs and sprawling medical records. Our system instantly parses, summarizes, and extracts critical health data.</p>
     </td>
   </tr>
 </table>
