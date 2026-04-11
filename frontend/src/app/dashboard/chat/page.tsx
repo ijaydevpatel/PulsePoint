@@ -80,28 +80,7 @@ export default function ChatPage() {
     };
   }, []);
 
-  // Mobile Viewport Height Fix: Use visualViewport API to get real available height
-  useEffect(() => {
-    const isMobile = window.innerWidth < 1024;
-    if (!isMobile) return;
 
-    const setMobileVH = () => {
-      const vh = window.visualViewport?.height || window.innerHeight;
-      document.documentElement.style.setProperty('--chat-mobile-vh', `${vh}px`);
-    };
-
-    setMobileVH();
-    window.visualViewport?.addEventListener('resize', setMobileVH);
-    window.addEventListener('resize', setMobileVH);
-    window.addEventListener('orientationchange', setMobileVH);
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', setMobileVH);
-      window.removeEventListener('resize', setMobileVH);
-      window.removeEventListener('orientationchange', setMobileVH);
-      document.documentElement.style.removeProperty('--chat-mobile-vh');
-    };
-  }, []);
 
   const handleSend = async (textOverride?: string) => {
     const messageText = textOverride || input;
@@ -160,24 +139,22 @@ export default function ChatPage() {
           height: 100% !important;
         }
 
-        /* === MOBILE-ONLY CHAT VIEWPORT FIX === */
+        /* === MOBILE-ONLY: FIXED INPUT DOCK (Bulletproof) === */
         @media (max-width: 1023px) {
-          /* Force the entire chat shell to use real mobile viewport height */
-          .chat-mobile-shell {
-            height: calc(var(--chat-mobile-vh, 100dvh) - 64px) !important;
-            max-height: calc(var(--chat-mobile-vh, 100dvh) - 64px) !important;
-            display: flex !important;
-            flex-direction: column !important;
-            overflow: hidden !important;
+          /* Input dock: position:fixed always pins to real visible viewport */
+          .chat-input-dock {
+            position: fixed !important;
+            bottom: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+            z-index: 9999 !important;
+            background: var(--color-background-app) !important;
           }
 
-          /* Input dock: always visible at bottom with safe-area + breathing room */
-          .chat-input-dock {
-            position: sticky !important;
-            bottom: 0 !important;
-            flex-shrink: 0 !important;
-            padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
-            z-index: 50 !important;
+          /* Message area needs bottom padding so content isn't hidden behind fixed dock */
+          .chat-messages-area {
+            padding-bottom: 110px !important;
           }
         }
 
@@ -198,7 +175,7 @@ export default function ChatPage() {
         }
       `}</style>
 
-      <div className="chat-mobile-shell flex flex-col h-full w-full overflow-hidden relative transition-all duration-500">
+      <div className="flex flex-col h-full w-full overflow-hidden relative transition-all duration-500">
         
         {/* Chat Header Utility - Borderless */}
         <div className="px-8 py-4 flex items-center justify-between shrink-0">
@@ -217,7 +194,7 @@ export default function ChatPage() {
         {/* Message Area - Expansive */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto chat-scrollbar px-6 py-8 md:px-10 space-y-6"
+          className="chat-messages-area flex-1 overflow-y-auto chat-scrollbar px-6 py-8 md:px-10 space-y-6"
         >
           <AnimatePresence>
             {messages.map((m) => (
