@@ -107,15 +107,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isSignedIn, getToken]);
 
-  const triggerLocationPulse = useCallback(() => {
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        () => {}, 
-        () => {}, 
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    }
-  }, []);
 
   const saveProfile = useCallback((newProfile: UserProfile) => {
     const sanitized = sanitizeProfile(newProfile);
@@ -181,12 +172,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       } finally {
         clearTimeout(timeoutId);
         setIsAuthLoaded(true);
-        triggerLocationPulse();
       }
     };
 
     fetchProfile();
-  }, [isClerkLoaded, isSignedIn, triggerLocationPulse]);
+  }, [isClerkLoaded, isSignedIn]);
 
   const value = useMemo(() => ({
     isAuthenticated: !!isSignedIn,

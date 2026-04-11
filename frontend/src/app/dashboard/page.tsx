@@ -51,36 +51,37 @@ export default function DashboardPage() {
       
       hasFetchedIntel.current = true;
       setLoadingIntel(true);
+
+      const getPosition = () => new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        });
+      });
+
       try {
-          if (navigator.geolocation) {
-             navigator.geolocation.getCurrentPosition(async (pos) => {
-               const lat = pos.coords.latitude;
-               const lon = pos.coords.longitude;
-               const data = await apiClient.get(`/dashboard/intel?lat=${lat}&lon=${lon}`);
-                if (data && data.intelligence) {
-                  saveProfile({ ...profile, intelligence: data.intelligence, osint: data.osint });
-                  setNeuralPulse(data.neuralPulse);
-                }
-              }, async (error) => {
-                console.warn("Geolocation denied or failed:", error.message);
-                const data = await apiClient.get(`/dashboard/intel`);
-                if (data && data.intelligence) {
-                  saveProfile({ ...profile, intelligence: data.intelligence });
-                  setNeuralPulse(data.neuralPulse);
-                }
-              }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-           } else {
-              const data = await apiClient.get(`/dashboard/intel`);
-              if (data && data.intelligence) {
-                saveProfile({ ...profile, intelligence: data.intelligence });
-                setNeuralPulse(data.neuralPulse);
-              }
-           }
-        } catch (error) {
-          console.error("Intelligence Load Error:", error);
-        } finally {
-          setLoadingIntel(false);
+        let url = `/dashboard/intel`;
+        
+        try {
+          // Await coordinate fetch so it prompts the user correctly
+          const pos = await getPosition();
+          url += `?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
+        } catch (locErr: any) {
+          console.warn("Geolocation skipped/failed:", locErr.message || locErr);
         }
+
+        const data = await apiClient.get(url);
+        if (data && data.intelligence) {
+          saveProfile({ ...profile, intelligence: data.intelligence, osint: data.osint });
+          setNeuralPulse(data.neuralPulse);
+        }
+      } catch (error) {
+        console.error("Intelligence Load Error:", error);
+      } finally {
+        setLoadingIntel(false);
+      }
     };
     fetchIntelligence();
   }, [profile, saveProfile]);
