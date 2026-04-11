@@ -85,7 +85,14 @@ const profileSchema = new mongoose.Schema({
   lastIntelUpdate: {
     type: Date,
     default: null
-  }
+  },
+  // Anti-Repetition History Buffers
+  recentFacts: [{
+    type: String
+  }],
+  recentTips: [{
+    type: String
+  }]
 }, {
   timestamps: true,
 });

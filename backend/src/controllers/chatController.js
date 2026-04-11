@@ -73,20 +73,36 @@ RULES:
 // @access  Private
 export const getGreeting = async (req, res) => {
   try {
+    // Fetch user's recently shown facts to prevent repetition
+    let recentFacts = [];
+    let profile = null;
+    if (req.auth?.userId) {
+      profile = await Profile.findOne({ user: req.auth.userId });
+      if (profile?.recentFacts?.length) {
+        recentFacts = profile.recentFacts.slice(-20);
+      }
+    }
+
+    const antiRepeatBlock = recentFacts.length > 0
+      ? `\nALREADY USED FACTS (DO NOT REPEAT ANY OF THESE, NOT EVEN REPHRASED):\n${recentFacts.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n`
+      : '';
+
     const systemInstruction = `You are PulsePo!int's Clinical Intelligence Scout.
 Generate a SINGLE, unique, and medically accurate health/physiological fact starting with 'Did you know...' or 'Do you know...'.
 STRICT RULES:
 - The fact MUST be strictly medical or health-related.
+- The fact MUST be completely NEW and NEVER repeat any previously used fact.${antiRepeatBlock}
 - Use ONE empty line (single paragraph break) to separate the fact from the greeting.
 - At the VERY END, add a GENERAL warm medical partner greeting: 'How can I assist you today?' or 'What can I provide for you today?'.
 - FINALLY, provide 3 SHORT (2-3 words) clinical query suggestions formatted exactly like this:
 SUGGESTIONS: Suggestion 1, Suggestion 2, Suggestion 3
 - NO MARKDOWN BOLDING (**). NO ITALICS (*).
-- Keep it highly variable (high entropy). Avoid common trivia.`;
+- Keep it highly variable (high entropy). Avoid common trivia.
+- TIMESTAMP SEED (use for entropy): ${Date.now()}`;
 
     const promptText = "Generate a fresh clinical greeting and 3 query suggestions for a new diagnostic session.";
     
-    console.log(`[ChatGreeting] Syncing with Qwen-3 Conversational Core...`);
+    console.log(`[ChatGreeting] Syncing with Qwen-3 Conversational Core... (${recentFacts.length} facts in anti-repeat buffer)`);
     let aiResponse;
     try {
       aiResponse = await generateGroqChat(promptText, systemInstruction);
@@ -108,6 +124,19 @@ SUGGESTIONS: Suggestion 1, Suggestion 2, Suggestion 3
     if (suggestionMatch) {
        suggestions = suggestionMatch[1].split(',').map(s => s.trim()).filter(s => s.length > 0);
        cleanedReply = cleanedReply.replace(/SUGGESTIONS:.*$/im, '').trim();
+    }
+
+    // Save the new fact to anti-repetition buffer (keep last 20)
+    if (profile && cleanedReply) {
+      // Extract just the fact portion (first line/paragraph)
+      const factLine = cleanedReply.split('\n')[0].trim();
+      if (factLine.length > 10) {
+        const updatedFacts = [...(profile.recentFacts || []), factLine].slice(-20);
+        await Profile.updateOne(
+          { user: req.auth.userId },
+          { $set: { recentFacts: updatedFacts } }
+        );
+      }
     }
 
     res.json({ 

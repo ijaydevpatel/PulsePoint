@@ -56,6 +56,12 @@ export const getIntelligence = async (req, res) => {
 
         if (!profile) return res.status(404).json({ message: "Profile not found" });
 
+        // Fetch anti-repetition history
+        const recentTips = (profile.recentTips || []).slice(-20);
+        const antiRepeatBlock = recentTips.length > 0
+          ? `\nPREVIOUSLY GENERATED CONTENT (DO NOT REPEAT ANY OF THESE TOPICS, TIPS, OR EDUCATION TITLES — NOT EVEN REPHRASED):\n${recentTips.map((t, i) => `${i + 1}. ${t}`).join('\n')}\n`
+          : '';
+
         // Parallelize OSINT and AI generation
         let osint = null;
         if (lat && lon || city) {
@@ -73,7 +79,8 @@ export const getIntelligence = async (req, res) => {
             - LANGUAGE: Use EXACTLY 50% medical clinical language and 50% simple normal language for all text.
             - INTELLIGENCE BRIEF: This MUST be a LONG, DETAILED PARAGRAPH (4-6 sentences) synthesizing current biometric trajectory.
             - EDUCATION EXPLANATION: This MUST be a detailed 3-sentence clinical breakdown of a relevant medical concept.
-            - NOVELTY: Every insight must be unique for this session: ${new Date().toISOString()}.
+            - ALL CONTENT MUST BE COMPLETELY NEW AND UNIQUE. NEVER repeat any previously generated content.${antiRepeatBlock}
+            - NOVELTY: Every insight must be unique for this session: ${new Date().toISOString()}-${Date.now()}.
 
             Return JSON exactly matching this structure (DO NOT include markdown or text outside JSON):
             {
@@ -125,6 +132,20 @@ export const getIntelligence = async (req, res) => {
                     explanation: "The stable state of your physiological systems during environmental variance."
                 }
             };
+        }
+
+        // Save new content to anti-repetition buffer (keep last 20)
+        const newEntries = [];
+        if (intelligence.dailyTip) newEntries.push(`TIP: ${intelligence.dailyTip}`);
+        if (intelligence.education?.title) newEntries.push(`EDU: ${intelligence.education.title}`);
+        if (intelligence.intelligenceBrief) newEntries.push(`BRIEF: ${intelligence.intelligenceBrief.substring(0, 80)}`);
+        
+        if (newEntries.length > 0) {
+          const updatedTips = [...recentTips, ...newEntries].slice(-20);
+          await Profile.updateOne(
+            { user: req.auth.userId },
+            { $set: { recentTips: updatedTips } }
+          );
         }
 
         res.json({
