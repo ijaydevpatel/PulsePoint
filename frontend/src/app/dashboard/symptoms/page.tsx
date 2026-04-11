@@ -98,21 +98,21 @@ export default function SymptomsPage() {
                 <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                 Baseline Markers
               </h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {defaultSymptoms.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => toggleSymptom(s.id)}
-                    className={`flex items-center gap-2 p-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-tight ${
+                    className={`flex items-center gap-1.5 p-3 rounded-2xl border transition-all text-[10px] font-black uppercase tracking-tight min-w-0 ${
                       selectedSymptoms.includes(s.id)
                         ? "bg-primary text-white border-primary shadow-glow scale-102"
                         : "bg-surface-low/50 border-border-glass text-text-secondary hover:bg-surface-low hover:border-surface-container-high"
                     }`}
                   >
-                    <div className={selectedSymptoms.includes(s.id) ? "text-white" : "text-primary opacity-60"}>
+                    <div className={`shrink-0 ${selectedSymptoms.includes(s.id) ? "text-white" : "text-primary opacity-60"}`}>
                       {s.icon}
                     </div>
-                    {s.label}
+                    <span className="truncate">{s.label}</span>
                   </button>
                 ))}
               </div>

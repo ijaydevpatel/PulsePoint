@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
       
       {/* App Shell Core */}
-      <main className={`flex-1 flex flex-col relative transition-all duration-300 ${isMapPage ? 'lg:ml-0' : 'lg:ml-[84px]'} w-full min-w-0 overflow-hidden text-left`}>
+      <main className={`flex-1 flex flex-col relative transition-all duration-300 ${isMapPage ? 'lg:ml-0' : 'lg:ml-[84px]'} w-full min-w-0 overflow-x-hidden overflow-y-auto text-left`}>
         
         {/* Floating HUD Layer (Desktop Only) */}
         <header className={`hidden lg:flex fixed top-6 inset-x-8 h-12 items-center justify-between z-[100] shrink-0 pointer-events-none ${isMapPage ? 'pl-20' : 'pl-0'}`}>
@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Dash Content Area */}
-        <div className={`flex-1 flex flex-col h-full overflow-hidden ${isMapPage ? 'pt-0 pb-0' : 'pt-16 lg:pt-24 pb-0'} ${isMapPage || isAnalyzerPage ? 'px-0' : 'px-4 lg:px-8'}`}>
+        <div className={`flex-1 flex flex-col h-full overflow-x-hidden overflow-y-auto ${isMapPage ? 'pt-0 pb-0' : 'pt-16 lg:pt-24 pb-0'} ${isMapPage || isAnalyzerPage ? 'px-0' : 'px-4 lg:px-8'}`}>
           {children}
         </div>
       </main>

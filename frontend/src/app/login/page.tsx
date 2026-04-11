@@ -1,15 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import Link from "next/link";
-import { Fingerprint, ArrowLeft } from "lucide-react";
-import { SignIn } from "@clerk/nextjs";
+import { Fingerprint, ArrowLeft, Loader2 } from "lucide-react";
+import { SignIn, useAuth } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { useTheme } from "@/components/core/ThemeProvider";
 
 export default function LoginPage() {
   const { theme } = useTheme();
+  const { isLoaded, isSignedIn, signOut } = useAuth();
+  const [clearing, setClearing] = useState(false);
+
+  // Auto-clear any existing session so the login page always shows a fresh form
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (isSignedIn) {
+      setClearing(true);
+      signOut().finally(() => setClearing(false));
+    }
+  }, [isLoaded, isSignedIn, signOut]);
   
   const containerVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
@@ -17,7 +28,7 @@ export default function LoginPage() {
       opacity: 1, y: 0,
       transition: { 
         duration: 0.8, 
-        ease: [0.16, 1, 0.3, 1] as any // Casting to avoid strict Easing type check
+        ease: [0.16, 1, 0.3, 1] as any
       },
     },
   };
@@ -28,6 +39,12 @@ export default function LoginPage() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }} />
 
+      {(!isLoaded || clearing) ? (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-4 z-30">
+          <Loader2 size={32} className="animate-spin text-primary" />
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em]">Initializing Identity Portal...</p>
+        </motion.div>
+      ) : (
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -107,6 +124,7 @@ export default function LoginPage() {
           />
         </div>
       </motion.div>
+      )}
     </div>
   );
 }
