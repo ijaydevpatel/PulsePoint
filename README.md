@@ -170,7 +170,7 @@ npm run dev
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:202020,100:0055FF&height=100&section=footer" width="100%" />
 
 ---
-<i>Engineered for health. Designed with absolute precision.</i>
+<i>Engineered to heal, with a human feel.</i>
 <br><br>
 <img src="https://img.shields.io/badge/Status-Production_Ready-success?style=for-the-badge" />
 
