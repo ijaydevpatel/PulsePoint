@@ -37,9 +37,9 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
   const startTime = Date.now();
   const apiKey = process.env.GEMINI_API_KEY;
   
-  let modelId = targetModel;
-  if (modelId === "Gemini 2.5 Flash") modelId = "gemini-1.5-flash";
-  if (modelId === "Gemini 3 Flash") modelId = "gemini-1.5-pro";
+  // Keep the exact model versions the user specified, just format them so the API doesn't throw a 400 error.
+  // E.g., "Gemini 2.5 Flash" -> "gemini-2.5-flash"
+  const modelId = targetModel.toLowerCase().replace(/ /g, '-');
 
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is missing from clinical environment.");
