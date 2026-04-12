@@ -74,9 +74,9 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
           }
         ],
         generationConfig: {
-          temperature: 1, // Locked at clinical maximum as requested
-          maxOutputTokens: 3072, // Expanded for multi-document synthesis potential
-          topP: 1,
+          temperature: 0.1, // Forced to 0.1 for MAXIMUM medical extraction precision.
+          maxOutputTokens: 2048, // Capped to speed up generation limits
+          topP: 0.8, // Reduced to eliminate hallucinations and ramblings (speeds up response)
           responseMimeType: "application/json"
         }
       })
