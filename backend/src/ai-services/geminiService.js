@@ -39,7 +39,12 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
   
   // Keep the exact model versions the user specified, just format them so the API doesn't throw a 400 error.
   // E.g., "Gemini 2.5 Flash" -> "gemini-2.5-flash"
-  const modelId = targetModel.toLowerCase().replace(/ /g, '-');
+  let modelId = targetModel.toLowerCase().replace(/ /g, '-');
+  
+  // Gemini 3 Flash requires the "-preview" suffix in the v1beta API currently
+  if (modelId === 'gemini-3-flash') {
+    modelId = 'gemini-3-flash-preview';
+  }
 
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is missing from clinical environment.");
