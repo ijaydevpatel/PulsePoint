@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { Search, Map as MapIcon, Hospital, Cross, MapPin, Loader2, Navigation, Activity, LocateFixed, Pill, ClipboardPlus, Microscope, Store, RefreshCcw } from "lucide-react";
+import { Search, Map as MapIcon, Hospital, Cross, MapPin, Loader2, Navigation, Activity, LocateFixed, Pill, ClipboardPlus, Microscope, Store, RefreshCcw, Syringe, Stethoscope, HeartPulse, Droplets, ScanLine, Eye, Ear, Building2, FlaskConical, BriefcaseMedical, TestTubes } from "lucide-react";
 import { useTheme } from "@/components/core/ThemeProvider";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { motion, AnimatePresence } from "framer-motion";
@@ -186,28 +186,99 @@ export default function MapPage() {
         // PRECISION MODE: Create a high-density 5km scan around the targeted center
         const clat = centerOverride[1];
         const clng = centerOverride[0];
-        const offset = 0.045; // ~5km padding for better coverage
+        const offset = 0.06; // ~6.5km padding for comprehensive medical coverage
         bbox = `${clat - offset},${clng - offset},${clat + offset},${clng + offset}`;
       } else {
         const bounds = mapInstance.getBounds();
         const sw = bounds.getSouthWest();
         const ne = bounds.getNorthEast();
-        // Expand bounds slightly for better edge coverage
-        const latPad = (ne.lat - sw.lat) * 0.15;
-        const lngPad = (ne.lng - sw.lng) * 0.15;
-        bbox = `${sw.lat - latPad},${sw.lng - lngPad},${ne.lat + latPad},${ne.lng + lngPad}`;
+        // Expand bounds generously for complete edge coverage
+        const latPad = (ne.lat - sw.lat) * 0.25;
+        const lngPad = (ne.lng - sw.lng) * 0.25;
+        bbox = `${sw.lat - latPad},${sw.lng - lngPad},${ne.lat + latPad},${ne.lng + lngPad}`;  
       }
       
       const query = `
-        [out:json][timeout:40];
+        [out:json][timeout:45];
         (
-          node["amenity"~"hospital|clinic|pharmacy|doctors|dentist|healthcare|social_facility|health_post|nursing_home|veterinary|laboratory|blood_bank"](${bbox});
-          node["healthcare"~"hospital|clinic|doctor|pharmacy|laboratory|blood_bank|diagnostic|center|physiotherapist|rehab|radiology|medical_center|mri|scanning"](${bbox});
-          node["shop"~"medical_supply|chemist|pharmacy|optician|hearing_aid"](${bbox});
-          node["office"~"physician|psychiatrist|psychologist|healthcare|laboratory|diagnostic"](${bbox});
-          way["amenity"~"hospital|clinic|pharmacy|doctors|dentist|healthcare|social_facility|health_post|nursing_home|laboratory|blood_bank"](${bbox});
-          way["healthcare"~"hospital|clinic|doctor|pharmacy|laboratory|blood_bank|diagnostic|center|radiology|mri|scanning"](${bbox});
-          way["shop"~"pharmacy|chemist"](${bbox});
+          // HOSPITALS & CLINICS (All sizes)
+          node["amenity"="hospital"](${bbox});
+          node["amenity"="clinic"](${bbox});
+          node["amenity"="doctors"](${bbox});
+          node["amenity"="dentist"](${bbox});
+          node["amenity"="healthcare"](${bbox});
+          node["amenity"="health_post"](${bbox});
+          node["amenity"="nursing_home"](${bbox});
+          node["amenity"="social_facility"](${bbox});
+          node["amenity"="veterinary"](${bbox});
+          way["amenity"="hospital"](${bbox});
+          way["amenity"="clinic"](${bbox});
+          way["amenity"="doctors"](${bbox});
+          way["amenity"="dentist"](${bbox});
+          way["amenity"="nursing_home"](${bbox});
+          relation["amenity"="hospital"](${bbox});
+
+          // PHARMACIES & MEDICAL SHOPS
+          node["amenity"="pharmacy"](${bbox});
+          node["shop"="pharmacy"](${bbox});
+          node["shop"="chemist"](${bbox});
+          node["shop"="medical_supply"](${bbox});
+          node["shop"="optician"](${bbox});
+          node["shop"="hearing_aids"](${bbox});
+          node["shop"="herbalist"](${bbox});
+          way["amenity"="pharmacy"](${bbox});
+          way["shop"="pharmacy"](${bbox});
+          way["shop"="chemist"](${bbox});
+          way["shop"="medical_supply"](${bbox});
+          way["shop"="optician"](${bbox});
+
+          // LABORATORIES & DIAGNOSTICS
+          node["amenity"="laboratory"](${bbox});
+          node["healthcare"="laboratory"](${bbox});
+          node["healthcare"="blood_bank"](${bbox});
+          node["healthcare"="blood_donation"](${bbox});
+          node["healthcare"="diagnostic"](${bbox});
+          node["healthcare"="sample_collection"](${bbox});
+          way["amenity"="laboratory"](${bbox});
+          way["healthcare"="laboratory"](${bbox});
+          way["healthcare"="blood_bank"](${bbox});
+          way["healthcare"="diagnostic"](${bbox});
+
+          // IMAGING & RADIOLOGY (X-Ray, MRI, CT Scan)
+          node["healthcare"="radiology"](${bbox});
+          node["healthcare"="mri"](${bbox});
+          node["healthcare"="scanning"](${bbox});
+          node["healthcare:speciality"="radiology"](${bbox});
+          node["healthcare:speciality"="diagnostic_radiology"](${bbox});
+          way["healthcare"="radiology"](${bbox});
+          way["healthcare"="mri"](${bbox});
+
+          // HEALTHCARE SPECIALITIES & CENTRES
+          node["healthcare"="hospital"](${bbox});
+          node["healthcare"="clinic"](${bbox});
+          node["healthcare"="doctor"](${bbox});
+          node["healthcare"="pharmacy"](${bbox});
+          node["healthcare"="centre"](${bbox});
+          node["healthcare"="center"](${bbox});
+          node["healthcare"="physiotherapist"](${bbox});
+          node["healthcare"="rehabilitation"](${bbox});
+          node["healthcare"="psychotherapist"](${bbox});
+          node["healthcare"="optometrist"](${bbox});
+          node["healthcare"="midwife"](${bbox});
+          node["healthcare"="nurse"](${bbox});
+          node["healthcare"="dentist"](${bbox});
+          node["healthcare"="alternative"](${bbox});
+          node["healthcare"="yes"](${bbox});
+          way["healthcare"="hospital"](${bbox});
+          way["healthcare"="clinic"](${bbox});
+          way["healthcare"="centre"](${bbox});
+          way["healthcare"="center"](${bbox});
+          way["healthcare"="doctor"](${bbox});
+
+          // HEALTHCARE OFFICES
+          node["office"="physician"](${bbox});
+          node["office"="healthcare"](${bbox});
+          node["office"="therapist"](${bbox});
         );
         out body center;
       `;
@@ -245,20 +316,72 @@ export default function MapPage() {
         const id = `${el.id}`;
         foundIds.add(id);
         const coords: [number, number] = el.type === 'node' ? [el.lon, el.lat] : [el.center.lon, el.center.lat];
-        const rawName = el.tags?.name || el.tags?.["name:en"] || "Clinical Node";
-        const amString = `${el.tags?.amenity || ""} ${el.tags?.healthcare || ""} ${el.tags?.shop || ""} ${el.tags?.office || ""}`.toLowerCase();
+        const rawName = el.tags?.name || el.tags?.["name:en"] || el.tags?.["name:hi"] || "Medical Facility";
+        const amString = `${el.tags?.amenity || ""} ${el.tags?.healthcare || ""} ${el.tags?.shop || ""} ${el.tags?.office || ""} ${el.tags?.["healthcare:speciality"] || ""}`.toLowerCase();
+        const nameCheck = rawName.toLowerCase();
 
         let nodeHex = "#e11d48"; // Default: Red (Hospitals)
         let tw = "text-primary";
-        let icComp = Hospital;
-        let fl = "Clinical Node";
+        let icComp: any = Hospital;
+        let fl = "Hospital";
 
-        if (amString.match(/pharmacy|chemist|medical_supply|drugstore|medicine|optician|hearing_aid/)) { 
-           nodeHex = "#10b981"; tw = "text-green-500 font-black"; icComp = Pill; fl = "Medical Store"; 
-        } else if (amString.match(/laboratory|blood_bank|diagnostic|lab|pathology|radiology|center|mri|scanning|scan/)) { 
-           nodeHex = "#10b981"; tw = "text-green-500 font-black"; icComp = Microscope; fl = "Diagnostic Lab"; 
-        } else if (amString.match(/doctor|dentist|clinic|general|physician|physiothe|physio|rehab|psych/)) { 
-           nodeHex = "#a855f7"; tw = "text-purple-500 font-black"; icComp = ClipboardPlus; fl = "Clinical Triage"; 
+        // === PRIORITY CLASSIFICATION (most specific first) ===
+
+        // 1. BLOOD BANKS & DONATION CENTERS
+        if (amString.match(/blood_bank|blood_donation/) || nameCheck.match(/blood\s*bank|blood\s*centre|blood\s*center/)) {
+           nodeHex = "#dc2626"; tw = "text-red-600 font-black"; icComp = Droplets; fl = "Blood Bank";
+        }
+        // 2. X-RAY / MRI / CT SCAN / IMAGING CENTERS
+        else if (amString.match(/radiology|mri|scanning|diagnostic_radiology/) || nameCheck.match(/x[\-\s]?ray|mri|ct\s*scan|imaging|radiology|sonography|ultrasound|scan\s*cent/)) {
+           nodeHex = "#f59e0b"; tw = "text-amber-500 font-black"; icComp = ScanLine; fl = "Imaging Center";
+        }
+        // 3. PATHOLOGY / BLOOD TESTING / DIAGNOSTIC LABS
+        else if (amString.match(/laboratory|diagnostic|sample_collection/) || nameCheck.match(/lab|patholog|diagnostic|blood\s*test|testing\s*cent|test\s*cent|specimen|clinical\s*lab/)) {
+           nodeHex = "#8b5cf6"; tw = "text-violet-500 font-black"; icComp = FlaskConical; fl = "Laboratory";
+        }
+        // 4. PHARMACIES & MEDICAL SHOPS
+        else if (amString.match(/pharmacy|chemist|medical_supply|drugstore/) || nameCheck.match(/pharma|chemist|medical\s*shop|medical\s*store|medicine|drug\s*store|dawai|aushadhi/)) {
+           nodeHex = "#10b981"; tw = "text-emerald-500 font-black"; icComp = Pill; fl = "Pharmacy";
+        }
+        // 5. OPTICIANS & EYE CARE
+        else if (amString.match(/optician|optometrist/) || nameCheck.match(/optic|eye\s*care|eye\s*clinic|eye\s*hospital|vision|netralaya/)) {
+           nodeHex = "#06b6d4"; tw = "text-cyan-500 font-black"; icComp = Eye; fl = "Eye Care";
+        }
+        // 6. HEARING AID SHOPS
+        else if (amString.match(/hearing_aid/) || nameCheck.match(/hearing|audiology|ear\s*clinic/)) {
+           nodeHex = "#14b8a6"; tw = "text-teal-500 font-black"; icComp = Ear; fl = "Hearing Center";
+        }
+        // 7. DENTAL CLINICS
+        else if (amString.match(/dentist/) || nameCheck.match(/dent|dental|orthodon/)) {
+           nodeHex = "#ec4899"; tw = "text-pink-500 font-black"; icComp = Stethoscope; fl = "Dental Clinic";
+        }
+        // 8. NURSING HOMES
+        else if (amString.match(/nursing_home/) || nameCheck.match(/nursing\s*home|care\s*home|old\s*age/)) {
+           nodeHex = "#f97316"; tw = "text-orange-500 font-black"; icComp = HeartPulse; fl = "Nursing Home";
+        }
+        // 9. PHYSIOTHERAPY & REHABILITATION
+        else if (amString.match(/physiotherapist|rehabilitation/) || nameCheck.match(/physio|rehab|ortho/)) {
+           nodeHex = "#84cc16"; tw = "text-lime-500 font-black"; icComp = BriefcaseMedical; fl = "Physiotherapy";
+        }
+        // 10. MULTISPECIALITY HOSPITALS (detect by name keywords)
+        else if (amString.match(/hospital/) || nameCheck.match(/multispecial|multi\s*special|super\s*special|general\s*hospital|medical\s*college|institute|hosp/)) {
+           nodeHex = "#e11d48"; tw = "text-rose-500 font-black"; icComp = Building2; fl = "Hospital";
+        }
+        // 11. SMALL CLINICS & DOCTORS
+        else if (amString.match(/doctor|clinic|physician|general|centre|center/) || nameCheck.match(/clinic|doctor|dr\.|dispensary|polyclinic|health\s*cent/)) {
+           nodeHex = "#a855f7"; tw = "text-purple-500 font-black"; icComp = ClipboardPlus; fl = "Clinic";
+        }
+        // 12. VETERINARY
+        else if (amString.match(/veterinary/) || nameCheck.match(/vet|animal/)) {
+           nodeHex = "#22d3ee"; tw = "text-cyan-400 font-black"; icComp = Syringe; fl = "Veterinary";
+        }
+        // 13. ALTERNATIVE / AYURVEDA / HOMEOPATHY
+        else if (amString.match(/alternative|herbalist/) || nameCheck.match(/ayurved|homeopath|unani|siddha|naturopath|herbal/)) {
+           nodeHex = "#65a30d"; tw = "text-green-600 font-black"; icComp = Store; fl = "Alternative Medicine";
+        }
+        // 14. PSYCHOTHERAPY / MENTAL HEALTH
+        else if (amString.match(/psych|therapist/) || nameCheck.match(/psych|mental\s*health|counsel/)) {
+           nodeHex = "#7c3aed"; tw = "text-violet-600 font-black"; icComp = HeartPulse; fl = "Mental Health";
         }
 
         features.push({
@@ -519,7 +642,7 @@ export default function MapPage() {
                   )}
                </div>
                <p className="text-[11px] font-black text-text-primary tracking-tight leading-none opacity-80 uppercase truncate">
-                  {searchQuery ? `Filtering: ${searchQuery}` : "Live Infinity Infrastructure"}
+                  {searchQuery ? `Filtering: ${searchQuery}` : `${infrastructure.length} Medical Facilities`}
                </p>
             </div>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar flex flex-col gap-6">
