@@ -14,6 +14,7 @@ export default function MapPage() {
   // STABILITY: Marker Pooling System (HTML Pills only)
   const markersRef = useRef<Map<string, any>>(new Map());
   const isScanningRef = useRef(false);
+  const scanRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { theme } = useTheme();
   
   const [isSyncing, setIsSyncing] = useState(false);
@@ -26,6 +27,7 @@ export default function MapPage() {
   const [lat] = useState(22.562);
   const [zoom] = useState(14.5);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
+  const mapReadyRef = useRef(false);
 
   const DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
   const LIGHT_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -165,28 +167,39 @@ export default function MapPage() {
   };
 
   const scanClinicalNodes = useCallback(async (mapInstance: any, centerOverride?: [number, number]) => {
-    if (!mapInstance || isScanningRef.current) return;
+    if (!mapInstance) return;
+    // GUARD: Prevent concurrent scans but allow retry after timeout
+    if (isScanningRef.current) return;
     isScanningRef.current = true;
     setIsScanning(true);
     
+    // SAFETY: Auto-unlock after 40s in case of network hang
+    const safetyUnlock = setTimeout(() => {
+      isScanningRef.current = false;
+      setIsScanning(false);
+    }, 40000);
+
     try {
       let bbox = "";
       
       if (centerOverride) {
-        // PRECISION MODE: Create a high-density 3km scan around the targeted center
-        const lat = centerOverride[1];
-        const lng = centerOverride[0];
-        const offset = 0.015; // Approx 1.5km padding
-        bbox = `${lat - offset},${lng - offset},${lat + offset},${lng + offset}`;
+        // PRECISION MODE: Create a high-density 5km scan around the targeted center
+        const clat = centerOverride[1];
+        const clng = centerOverride[0];
+        const offset = 0.045; // ~5km padding for better coverage
+        bbox = `${clat - offset},${clng - offset},${clat + offset},${clng + offset}`;
       } else {
         const bounds = mapInstance.getBounds();
         const sw = bounds.getSouthWest();
         const ne = bounds.getNorthEast();
-        bbox = `${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+        // Expand bounds slightly for better edge coverage
+        const latPad = (ne.lat - sw.lat) * 0.15;
+        const lngPad = (ne.lng - sw.lng) * 0.15;
+        bbox = `${sw.lat - latPad},${sw.lng - lngPad},${ne.lat + latPad},${ne.lng + lngPad}`;
       }
       
       const query = `
-        [out:json][timeout:35];
+        [out:json][timeout:40];
         (
           node["amenity"~"hospital|clinic|pharmacy|doctors|dentist|healthcare|social_facility|health_post|nursing_home|veterinary|laboratory|blood_bank"](${bbox});
           node["healthcare"~"hospital|clinic|doctor|pharmacy|laboratory|blood_bank|diagnostic|center|physiotherapist|rehab|radiology|medical_center|mri|scanning"](${bbox});
@@ -199,8 +212,26 @@ export default function MapPage() {
         out body center;
       `;
       
-      const response = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
-      if (!response.ok) throw new Error("SAT-SYNC FAULT");
+      // PRIMARY: overpass-api.de — FALLBACK: overpass.kumi.systems
+      let response: Response;
+      try {
+        response = await fetch(`https://overpass-api.de/api/interpreter`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: AbortSignal.timeout(38000),
+        });
+        if (!response.ok) throw new Error('primary_failed');
+      } catch {
+        // FALLBACK mirror
+        response = await fetch(`https://overpass.kumi.systems/api/interpreter`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(query)}`,
+          signal: AbortSignal.timeout(38000),
+        });
+        if (!response.ok) throw new Error("SAT-SYNC FAULT");
+      }
       
       const data = await response.json();
       const lib = await import("maplibre-gl");
@@ -263,8 +294,9 @@ export default function MapPage() {
       setTimeout(checkLabelCollisions, 800);
 
     } catch(err) {
-      console.warn("Clinical Intelligence Handshake fault...");
+      console.warn("Clinical Intelligence Handshake fault:", err);
     } finally {
+      clearTimeout(safetyUnlock);
       isScanningRef.current = false;
       setIsScanning(false);
     }
@@ -318,6 +350,20 @@ export default function MapPage() {
     });
   };
 
+  // AUTO-LOCATE on mount: silently attempt GPS, fall back to default center
+  useEffect(() => {
+    if (typeof window === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserPos([pos.coords.longitude, pos.coords.latitude]);
+      },
+      () => {
+        // Geolocation denied/failed — map stays on default center, no error shown
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }, []);
+
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
     const initializeMap = async () => {
@@ -326,12 +372,23 @@ export default function MapPage() {
         const lib = await import("maplibre-gl");
         const maplibregl = lib.default || lib;
         const mapInstance = new (maplibregl as any).Map({ container: mapContainer.current, style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE, center: [lng, lat], zoom: zoom, pitch: 62, bearing: -15, attributionControl: false, antialias: true });
-        mapInstance.on('load', () => { if (!mapInstance) return; inject3DArchitecture(mapInstance, theme === 'dark'); injectClinicalHardware(mapInstance); scanClinicalNodes(mapInstance); });
+        mapInstance.on('load', () => { 
+          if (!mapInstance) return; 
+          inject3DArchitecture(mapInstance, theme === 'dark'); 
+          injectClinicalHardware(mapInstance);
+          mapReadyRef.current = true;
+          // Delay initial scan slightly to let the map tiles settle
+          setTimeout(() => scanClinicalNodes(mapInstance), 500);
+        });
         map.current = mapInstance;
       } catch (err) { console.warn("Neural engine check..."); }
     };
     initializeMap();
-    return () => { if (map.current) { map.current.remove(); map.current = null; } };
+    return () => { 
+      mapReadyRef.current = false;
+      if (scanRetryRef.current) clearTimeout(scanRetryRef.current);
+      if (map.current) { map.current.remove(); map.current = null; } 
+    };
   }, []);
 
   useEffect(() => {
@@ -355,31 +412,24 @@ export default function MapPage() {
     if (!map.current || isSyncing) return;
     setIsSyncing(true);
     
-    const geoOptions = { 
-      enableHighAccuracy: true, 
-      timeout: 15000, // Increased for mobile reliability
-      maximumAge: 0 
-    };
-
     if (typeof window !== "undefined" && navigator.geolocation) {
        navigator.geolocation.getCurrentPosition(
          (pos) => { 
            setUserPos([pos.coords.longitude, pos.coords.latitude]); 
            setIsSyncing(false); 
          }, 
-         (err) => { 
-           console.warn("High Accuracy Pulse Failed, attempting balanced sync...", err);
-           // Fallback to balanced accuracy if high fidelity fails or times out
+         () => { 
+           // Fallback: balanced accuracy
            navigator.geolocation.getCurrentPosition(
              (pos) => {
                setUserPos([pos.coords.longitude, pos.coords.latitude]);
                setIsSyncing(false);
              },
              () => { setIsSyncing(false); },
-             { enableHighAccuracy: false, timeout: 10000 }
+             { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
            );
          }, 
-         geoOptions
+         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
        );
     } else { setIsSyncing(false); }
   };
