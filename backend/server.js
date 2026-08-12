@@ -1,4 +1,7 @@
 import 'dotenv/config'; // Crucial: must be highest priority due to ES Module hoisting
+import dns from 'dns';
+dns.setServers(['8.8.8.8', '1.1.1.1']);
+
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';

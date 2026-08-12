@@ -22,12 +22,20 @@ export default function MapPage() {
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [infrastructure, setInfrastructure] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [locationQuery, setLocationQuery] = useState("");
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   
-  const [lng] = useState(72.963);
-  const [lat] = useState(22.562);
+  // Default center: Auckland, New Zealand (174.7633, -36.8485)
+  const [lng, setLng] = useState(174.7633);
+  const [lat, setLat] = useState(-36.8485);
   const [zoom] = useState(14.5);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const mapReadyRef = useRef(false);
+
+  const userPosRef = useRef<[number, number] | null>(null);
+  useEffect(() => {
+    userPosRef.current = userPos;
+  }, [userPos]);
 
   const DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
   const LIGHT_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -312,6 +320,19 @@ export default function MapPage() {
       const features: any[] = [];
       const foundIds = new Set<string>();
 
+      // Get reference position for distance calculation (closest first sorting)
+      let referencePos: [number, number] = [lng, lat];
+      if (centerOverride) {
+        referencePos = centerOverride;
+      } else if (userPosRef.current) {
+        referencePos = userPosRef.current;
+      } else if (mapInstance) {
+        try {
+          const center = mapInstance.getCenter();
+          referencePos = [center.lng, center.lat];
+        } catch (e) {}
+      }
+
       data.elements.forEach((el: any) => {
         const id = `${el.id}`;
         foundIds.add(id);
@@ -398,7 +419,7 @@ export default function MapPage() {
            } catch(e) {}
         }
 
-        const dist = userPos ? calculateDistance(userPos, coords) : "...";
+        const dist = calculateDistance(referencePos, coords);
         currentNodes.push({ id, name: rawName, type: fl.toUpperCase(), hex: nodeHex, dist: dist, coords, icon: icComp, color: tw });
       });
 
@@ -423,7 +444,7 @@ export default function MapPage() {
       isScanningRef.current = false;
       setIsScanning(false);
     }
-  }, [userPos, checkLabelCollisions]);
+  }, [checkLabelCollisions]);
 
   const injectClinicalHardware = (mi: any) => {
      if (!mi || mi.getSource('clinical-infrastructure')) return;
@@ -494,15 +515,34 @@ export default function MapPage() {
       try {
         const lib = await import("maplibre-gl");
         const maplibregl = lib.default || lib;
-        const mapInstance = new (maplibregl as any).Map({ container: mapContainer.current, style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE, center: [lng, lat], zoom: zoom, pitch: 62, bearing: -15, attributionControl: false, antialias: true });
+        const initialCenter = userPosRef.current ? userPosRef.current : [lng, lat];
+        const mapInstance = new (maplibregl as any).Map({ container: mapContainer.current, style: theme === 'dark' ? DARK_STYLE : LIGHT_STYLE, center: initialCenter, zoom: zoom, pitch: 62, bearing: -15, attributionControl: false, antialias: true });
         mapInstance.on('load', () => { 
           if (!mapInstance) return; 
           inject3DArchitecture(mapInstance, theme === 'dark'); 
           injectClinicalHardware(mapInstance);
           mapReadyRef.current = true;
-          // Delay initial scan slightly to let the map tiles settle
-          setTimeout(() => scanClinicalNodes(mapInstance), 500);
+          
+          if (userPosRef.current) {
+            const currentPos = userPosRef.current;
+            if (userMarker.current) { userMarker.current.setLngLat(currentPos); } else {
+              const el = createIdentityMarker();
+              userMarker.current = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(currentPos).addTo(mapInstance);
+            }
+            mapInstance.flyTo({ center: currentPos, zoom: 16, duration: 2500, pitch: 65 });
+            setTimeout(() => scanClinicalNodes(mapInstance, currentPos), 500);
+          } else {
+            // Delay initial scan slightly to let the map tiles settle
+            setTimeout(() => scanClinicalNodes(mapInstance), 500);
+          }
         });
+
+        // Add Click Listener to allow user to set their location by clicking
+        mapInstance.on('click', (e: any) => {
+          const clickedCoords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+          setUserPos(clickedCoords);
+        });
+
         map.current = mapInstance;
       } catch (err) { console.warn("Neural engine check..."); }
     };

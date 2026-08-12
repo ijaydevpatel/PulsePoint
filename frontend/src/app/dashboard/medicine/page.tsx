@@ -185,21 +185,21 @@ export default function MedicinePage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        <div className="p-5 rounded-2xl bg-surface-glass border border-border-glass">
                           <div className="text-[9px] font-black mb-2 opacity-40 uppercase tracking-widest">Marker A: Primary Agent</div>
-                          <div className="text-sm font-black text-text-primary mb-4">{result.techIngredients1.active}</div>
+                          <div className="text-sm font-black text-text-primary mb-4">{result.techIngredients1?.active || "N/A"}</div>
                           
                           <div className="grid grid-cols-1 gap-3 pt-3 border-t border-border-glass/50">
                              <div>
                                 <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Binders & Excipients</span>
-                                <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1.inactive?.binders || "Standard Matrix"}</p>
+                                <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1?.inactive?.binders || "Standard Matrix"}</p>
                              </div>
                              <div className="flex gap-4">
                                 <div className="flex-1">
                                    <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Coating</span>
-                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1.inactive?.coatings || "None"}</p>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1?.inactive?.coatings || "None"}</p>
                                 </div>
                                 <div className="flex-1">
                                    <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Additives</span>
-                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1.inactive?.additives || "None"}</p>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients1?.inactive?.additives || "None"}</p>
                                 </div>
                              </div>
                           </div>
@@ -207,21 +207,21 @@ export default function MedicinePage() {
 
                        <div className="p-5 rounded-2xl bg-surface-glass border border-border-glass">
                           <div className="text-[9px] font-black mb-2 opacity-40 uppercase tracking-widest">Marker B: Secondary Agent</div>
-                          <div className="text-sm font-black text-text-primary mb-4">{result.techIngredients2.active}</div>
+                          <div className="text-sm font-black text-text-primary mb-4">{result.techIngredients2?.active || "N/A"}</div>
                           
                           <div className="grid grid-cols-1 gap-3 pt-3 border-t border-border-glass/50">
                              <div>
                                 <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Binders & Excipients</span>
-                                <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2.inactive?.binders || "Standard Matrix"}</p>
+                                <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2?.inactive?.binders || "Standard Matrix"}</p>
                              </div>
                              <div className="flex gap-4">
                                 <div className="flex-1">
                                    <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Coating</span>
-                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2.inactive?.coatings || "None"}</p>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2?.inactive?.coatings || "None"}</p>
                                 </div>
                                 <div className="flex-1">
                                    <span className="text-[8px] font-black text-primary uppercase tracking-tighter block mb-0.5">Additives</span>
-                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2.inactive?.additives || "None"}</p>
+                                   <p className="text-[10px] font-semibold text-text-secondary leading-tight">{result.techIngredients2?.inactive?.additives || "None"}</p>
                                 </div>
                              </div>
                           </div>
@@ -235,7 +235,7 @@ export default function MedicinePage() {
                    <div className="bg-surface-glass backdrop-blur-3xl border border-border-glass rounded-[28px] p-6">
                       <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-4">Safe Synergy Alt</h4>
                       <div className="flex flex-col gap-2">
-                        {result.safeAlternatives.map((alt: string) => (
+                        {(result.safeAlternatives || []).map((alt: string) => (
                            <div key={alt} className="flex items-center justify-between p-3 rounded-xl bg-green-600/5 text-green-600 border border-green-600/10 text-[11px] font-bold">
                                {alt}
                            </div>
@@ -245,7 +245,7 @@ export default function MedicinePage() {
                    <div className="bg-surface-glass backdrop-blur-3xl border border-border-glass rounded-[28px] p-6">
                       <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-widest mb-4">Critical Markers</h4>
                       <div className="flex flex-col gap-2">
-                        {result.warnings.map((warn: string) => (
+                        {(result.warnings || []).map((warn: string) => (
                            <div key={warn} className="flex items-center gap-3 p-3 rounded-xl bg-orange-600/5 text-orange-600 border border-orange-600/10 text-[11px] font-bold">
                               <AlertCircle size={14} />
                               {warn}

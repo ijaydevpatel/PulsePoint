@@ -2,13 +2,13 @@ import fetch from 'node-fetch';
 
 /**
  * PulsePoint Conversational AI (Stage 3)
- * Optimized for Qwen-3:32B (Ultra-High Speed Chat)
+ * Optimized for GPT-OSS-20B (Ultra-High Speed Chat on Groq LPU)
  * No forced-JSON to ensure fluid, conversational clinical guidance.
  */
 export const generateGroqChat = async (prompt, systemPrompt = "You are PulsePo!int's AI Doctor.") => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
-  const modelId = "qwen/qwen3-32b";
+  const modelId = "openai/gpt-oss-20b";
 
   if (!apiKey) throw new Error("GROQ_API_KEY missing.");
 
@@ -49,12 +49,12 @@ export const generateGroqChat = async (prompt, systemPrompt = "You are PulsePo!i
 
 /**
  * PulsePoint Groq Intelligence Service
- * Optimized for Qwen-3:32B (Ultra-High Speed LPU)
+ * Optimized for GPT-OSS-120B (High-Accuracy Clinical Intelligence on Groq LPU)
  */
 export const generateGroqIntelligence = async (prompt, systemPrompt = "You are PulsePo!int's Clinical Intelligence Engine. Provide precise, medical-grade insights.") => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
-  const modelId = "qwen/qwen3-32b"; // Updated to official Groq clinical ID
+  const modelId = "openai/gpt-oss-120b"; // High-accuracy model for structured clinical JSON
 
   if (!apiKey) {
     throw new Error("GROQ_API_KEY is missing from clinical environment.");
@@ -101,7 +101,7 @@ export const generateGroqIntelligence = async (prompt, systemPrompt = "You are P
   }
 };
 
-export const callGroq = async (prompt, systemPrompt, model = "qwen/qwen3-32b", temperature = 1.0) => {
+export const callGroq = async (prompt, systemPrompt, model = "openai/gpt-oss-120b", temperature = 1.0) => {
   const startTime = Date.now();
   const apiKey = process.env.GROQ_API_KEY;
 

@@ -199,6 +199,10 @@ Extract full technical ingredients (Active + Inactive decomposition) and analyze
     const finalPercentage = isHomeo ? 0 : (percentageMap[finalRisk] || 10);
     const finalInterference = isHomeo ? (parsedResponse.interferenceScore || percentageMap[finalRisk] || 10) : 0;
 
+     // Guarantee arrays to prevent client mapping crashes
+     parsedResponse.safeAlternatives = parsedResponse.safeAlternatives || ["Consult clinician"];
+     parsedResponse.warnings = parsedResponse.warnings || ["Always check with a physician"];
+
      res.json({
         compatibilityVerdict: finalVerdict,
         riskLevel: finalRisk,

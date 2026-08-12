@@ -74,7 +74,7 @@ export default function SymptomsPage() {
       setResult(data);
       setNeuralPulse(data.neuralPulse);
     } catch (err: any) {
-      setError(err.message || "Diagnostic engine synchronization failed.");
+      setError(err.message || "The diagnostic engine is temporarily unavailable. Please try again in a moment.");
     } finally {
       setLoading(false);
     }
