@@ -16,7 +16,6 @@ import symptomRoutes from './src/routes/symptomRoutes.js';
 import medicineRoutes from './src/routes/medicineRoutes.js';
 import chatRoutes from './src/routes/chatRoutes.js';
 import newsRoutes from './src/routes/newsRoutes.js';
-import diagnosticRoutes from './src/routes/diag.js'; // Helper for legacy SSE if needed
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
