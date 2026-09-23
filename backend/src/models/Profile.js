@@ -90,6 +90,14 @@ const profileSchema = new mongoose.Schema({
   recentFacts: [{
     type: String
   }],
+  /**
+   * Tips already shown on the dashboard, newest last.
+   *
+   * Declared but never written until now. Fed back into the prompt as a
+   * do-not-repeat list: without it the model converges on the same handful of
+   * suggestions — omega-3, hydration, sleep hygiene — because the profile it
+   * reasons from does not change between requests. Capped at 20 by the route.
+   */
   recentTips: [{
     type: String
   }]

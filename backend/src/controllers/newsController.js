@@ -141,7 +141,13 @@ export const getNews = async (req, res) => {
 
     // Neural Intelligence Summaries (Batch-Processed for High-Fidelity HUD)
     let aiTime = 0;
-    let aiModel = "Qwen-3:32B (Active Summarization)";
+    /*
+     * Placeholder only until the real generation reports its id on line 158.
+     * It used to name a model this route has never called, and it is returned
+     * to the client — so on any request where summarisation was skipped or
+     * failed, the app displayed "Qwen-3:32B" as the model behind the feed.
+     */
+    let aiModel = null;
     
     if (topBriefs.length > 0) {
       try {

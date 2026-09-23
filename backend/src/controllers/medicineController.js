@@ -70,7 +70,6 @@ export const checkMedicineCompatibility = async (req, res) => {
 
     const systemInstruction = `You are a Senior Research Clinical Pharmacist (PULSEPO!NT PHARMACORE ENGINE). 
 You MUST respond with ONLY a valid JSON object. 
-Strictly utilize the Research model ID: qwen3-32b.
 
 LANGUAGE & TONE RULES (MANDATORY):
 - Use EXACTLY 50% medical clinical language and 50% simple normal language for everything else.
@@ -111,7 +110,7 @@ JSON SCHEMA:
   "safeAlternatives": ["Clinical Alternative 1", "Clinical Alternative 2"],
   "warnings": ["Clinical Warning 1", "Clinical Warning 2"]
 }
-Respond with JSON ONLY. Utilitize Research model: qwen3-32b.`;
+Respond with JSON ONLY.`;
 
     const promptText = `TECHNICAL LABEL AUDIT:
 Agent A: ${med1}
@@ -125,7 +124,7 @@ Extract full technical ingredients (Active + Inactive decomposition) and analyze
     let neuralPulse = null;
     
     try {
-      console.log(`[MedicineController] Syncing with Groq Qwen-3 Research Engine...`);
+      console.log(`[MedicineController] Syncing with Groq GPT-OSS-120B...`);
       const { text, generationTime, model } = await generateGroqIntelligence(promptText, systemInstruction);
       neuralPulse = { generationTime, model };
       

@@ -1,4 +1,4 @@
-import { generateGroqIntelligence, generateGroqChat } from '../ai-services/groqService.js';
+import { generateGroqIntelligence, generateGroqChat, callGroqStream } from '../ai-services/groqService.js';
 import Profile from '../models/Profile.js';
 import ChatSession from '../models/ChatSession.js';
 
@@ -37,7 +37,7 @@ RULES:
 
     const promptText = `USER: ${message}\n\nASSISTANT:`;
     
-    console.log(`[ChatController] Dispatching Qwen-3 Conversational Core...`);
+    console.log(`[ChatController] Dispatching GPT-OSS-120B conversational core...`);
     let aiResponse;
     try {
       aiResponse = await generateGroqChat(promptText, systemInstruction);
@@ -108,7 +108,7 @@ STRICT RULES:
 
     const promptText = "Generate a fresh clinical greeting and 3 query suggestions for a new diagnostic session.";
     
-    console.log(`[ChatGreeting] Syncing with Qwen-3 Conversational Core... (${recentFacts.length} facts in anti-repeat buffer)`);
+    console.log(`[ChatGreeting] Syncing with GPT-OSS-120B conversational core... (${recentFacts.length} facts in anti-repeat buffer)`);
     let aiResponse;
     try {
       aiResponse = await generateGroqChat(promptText, systemInstruction);
@@ -198,7 +198,9 @@ ${isFirstResponse ? '1. ALWAYS start your response with a unique, interesting, a
     let accumulatedContent = '';
     let isFirstVisibleChunk = true;
 
-    await callGroqStream(promptText, systemInstruction, 'qwen3-32b', (chunk) => {
+    // Model left to the service default (gpt-oss-120b) rather than pinned
+    // here, so every clinical surface moves together when it changes.
+    await callGroqStream(promptText, systemInstruction, (chunk) => {
       if (chunk === null) {
         session.messages.push({ role: 'assistant', content: accumulatedContent });
         session.save().catch(e => console.error('[Stream] Session save error:', e));

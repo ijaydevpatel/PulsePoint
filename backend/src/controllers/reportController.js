@@ -36,12 +36,12 @@ export const analyzeReport = async (req, res) => {
 
       Output a surgical analysis in STRICT JSON format:
       {
-        "documentType": "Surgical Synthesis (2.5 -> 3 Core)",
+        "documentType": "Describe what the document actually is — blood panel, chest X-ray, discharge summary. Not the name of this pipeline.",
         "patientIdentity": "Extract Name, Age, Gender or report [UNKNOWN]",
         "findings": "Detail-heavy segmented audit. Quote the visual evidence from the extraction.",
         "abnormalMarkers": ["Key pathological findings"],
         "implications": "Differentiate pathologies based on synthesized morphological data.",
-        "advice": "DO NOT include the title 'Neural Recovery Plan:'. Start directly with 1-2 professional opening sentences providing a clinical preamble based on the findings. Then, provide the structured clinical waitlist. IMPORTANT: EVERY points (1., 2., 3...) MUST start on its own line with explicit newlines (\n).",
+        "advice": "What the person should do next. Start with 1-2 plain sentences of context based on the findings, then numbered steps. EVERY numbered point (1., 2., 3...) MUST start on its own line with an explicit newline (\n). Order the steps by urgency, most urgent first. Say plainly when something warrants same-day care. Never tell the reader they are fine — say what the document shows and who should interpret it.",
         "riskLevel": "Low | Moderate | High | Critical"
       }
 
@@ -58,7 +58,7 @@ export const analyzeReport = async (req, res) => {
       mimeType: req.file.mimetype
     }];
 
-    const { text: aiRawReply, generationTime, model } = await generateDualStageAnalysis(processedFiles, visionExtractionPrompt, pathologicalSynthesisPrompt);
+    const { text: aiRawReply, generationTime, model, stages } = await generateDualStageAnalysis(processedFiles, visionExtractionPrompt, pathologicalSynthesisPrompt);
     console.log(`[Analyzer] Dual-Stage Synchronization Complete. Total Time: ${generationTime}s`);
 
     let parsedResponse = {};
@@ -115,7 +115,7 @@ export const analyzeReport = async (req, res) => {
 
     res.json({
       ...parsedResponse,
-      neuralPulse: { generationTime, model },
+      neuralPulse: { generationTime, model, stages },
       timestamp: new Date().toISOString()
     });
 

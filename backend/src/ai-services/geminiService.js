@@ -20,11 +20,24 @@ export const generateDualStageAnalysis = async (files, visionPrompt, synthesisPr
   const synthesis = await generateGeminiAnalysis([], fullSynthesisPrompt, "Gemini 3 Flash");
   
   const totalTime = (Date.now() - startTime) / 1000;
-  
+
+  /*
+   * Report both resolved model ids, not a nickname.
+   *
+   * This used to return the string "Dual-Core (2.5 -> 3)", which tells a
+   * reader nothing checkable — the actual ids differ from the labels (Gemini 3
+   * resolves to gemini-3-flash-preview on v1beta). Someone looking at a
+   * clinical summary is entitled to know exactly which models produced it, and
+   * the app surfaces this verbatim.
+   */
   return {
     ...synthesis,
     generationTime: totalTime,
-    model: `Dual-Core (2.5 -> 3)`,
+    model: `${extraction.model} → ${synthesis.model}`,
+    stages: [
+      { stage: 'extraction', model: extraction.model, seconds: extraction.generationTime },
+      { stage: 'synthesis', model: synthesis.model, seconds: synthesis.generationTime }
+    ],
     intermediate: extraction.text
   };
 };
