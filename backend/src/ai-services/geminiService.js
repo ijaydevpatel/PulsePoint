@@ -26,7 +26,7 @@ export const generateDualStageAnalysis = async (files, visionPrompt, synthesisPr
    *
    * This used to return the string "Dual-Core (2.5 -> 3)", which tells a
    * reader nothing checkable — the actual ids differ from the labels (Gemini 3
-   * resolves to gemini-3-flash-preview on v1beta). Someone looking at a
+   * resolves to a dated GA release, see the mapping below). Someone looking at a
    * clinical summary is entitled to know exactly which models produced it, and
    * the app surfaces this verbatim.
    */
@@ -54,9 +54,25 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
   // E.g., "Gemini 2.5 Flash" -> "gemini-2.5-flash"
   let modelId = targetModel.toLowerCase().replace(/ /g, '-');
   
-  // Gemini 3 Flash requires the "-preview" suffix in the v1beta API currently
+  /*
+   * Gemini 3 Flash, resolved to a generally-available release.
+   *
+   * This used to resolve to 'gemini-3-flash-preview', which was correct when
+   * it was written and is not any more. Preview endpoints run on a small pool,
+   * and once the GA releases shipped (3.7 Flash on 13 Aug 2026, 3.8 Flash on
+   * 2 Sep) that pool stopped being fed - so the id kept resolving, kept being
+   * accepted, and answered 503 "this model is currently experiencing high
+   * demand" more or less permanently. It looked like an outage because the
+   * same call genuinely used to work.
+   *
+   * 3.7 rather than 3.8 on purpose: it has been GA about a month longer, and a
+   * freshly released model is where the capacity pressure moves next. This is
+   * still Gemini 3 doing the synthesis, which is the pipeline as specified.
+   *
+   * If this needs changing again, it is this one line.
+   */
   if (modelId === 'gemini-3-flash') {
-    modelId = 'gemini-3-flash-preview';
+    modelId = 'gemini-3.7-flash';
   }
 
   if (!apiKey) {
