@@ -121,7 +121,21 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
             ],
             generationConfig: {
               temperature: 0.1,
-              maxOutputTokens: 2048,
+              /*
+               * Room for the whole object.
+               *
+               * 2048 fitted a short report and truncated a long one - and it
+               * truncates in field order, so `findings` arrived as a wall of
+               * text ending mid-word and everything after it in the schema
+               * (abnormalMarkers, implications, advice, riskLevel) never
+               * arrived at all. That is why a full assessment came back with
+               * "Overall risk: Unknown" and no next steps: not a model
+               * failure, a budget the reply could not fit inside.
+               *
+               * Spends output tokens only on reports that need them - a short
+               * one still stops when it is finished.
+               */
+              maxOutputTokens: 8192,
               topP: 0.8,
               responseMimeType: "application/json"
             }
