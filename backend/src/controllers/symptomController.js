@@ -59,7 +59,7 @@ Respond with a strictly formatted JSON object matching the schema below.
 LANGUAGE & TONE RULES (MANDATORY):
 - DO NOT append "(Medical)" or "(Clinical)" to condition names. Keep the name clean.
 - Use EXACTLY 50% medical clinical language and 50% simple normal language for everything else.
-- SYNOPSIS: The "summaryText" MUST BE A LONG, DETAILED PARAGRAPH (minimum 6-8 sentences).
+- SYNOPSIS: "summaryText" MUST be 4-5 sentences. Concise and precise. State what the symptoms together suggest, the most likely explanation, anything serious that must be ruled out, and what to do next. No preamble, no restating the symptom list back, no filler.
 
 PATIENT PROFILE:
 - Age: ${profile.age}, Gender: ${profile.gender}, BMI: ${profile.bmi}
@@ -90,7 +90,7 @@ JSON SCHEMA (STRICT):
   },
   "healthEducation": { "causes": "Detailed paragraph", "prevention": "Detailed paragraph", "recovery": "Detailed paragraph" },
   "medicalAnalogy": "Simple analogy",
-  "summaryText": "A LONG DETAILED PARAGRAPH (6-8 sentences) synthesis of the diagnostic matrix."
+  "summaryText": "4-5 sentences. Concise and precise."
 }
 
 Respond with JSON ONLY.`;
