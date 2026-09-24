@@ -67,23 +67,44 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
     requestedId = 'gemini-3.7-flash';
   }
 
-  // Build ordered candidate list based on requested target model
-  const candidateModels = requestedId.includes('3') 
-    ? ['gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite']
-    : ['gemini-2.5-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
-
-  // Ensure requested model is tried first if not in list
-  if (!candidateModels.includes(requestedId)) {
-    candidateModels.unshift(requestedId);
-  }
+  /*
+   * Candidates, per stage, and no wider.
+   *
+   * Stage 1 is vision extraction and runs on Gemini 2.5 Flash alone. Letting
+   * it fall through to a Gemini 3 model was not a safety net: it changed which
+   * model read the document without saying so, and every extra attempt
+   * re-uploads the whole file as base64, which is what made a multi-page PDF
+   * take minutes and time the app out.
+   *
+   * Stage 2 is synthesis over text that has already been extracted, so it is
+   * cheap to retry and genuinely worth a fallback: 3.7, then 3.5, then Groq
+   * below when both are busy.
+   */
+  const isSynthesis = requestedId.includes('3');
+  const candidateModels = isSynthesis
+    ? ['gemini-3.7-flash', 'gemini-3.5-flash']
+    : ['gemini-2.5-flash'];
 
   let lastError = null;
 
   for (const modelId of candidateModels) {
-    // Retry up to 2 attempts for transient 503 / 429 errors
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    /*
+     * One attempt per model.
+     *
+     * The second attempt was a retry against the same busy model a second
+     * later, which a 503 almost never clears in - it doubled the cost of a
+     * bad run for close to no chance of success. Moving to the next candidate
+     * is the faster and more likely recovery, and that is what happens now.
+     */
+    /*
+     * Runs once, and the loop is deliberate rather than leftover: the `break`
+     * statements below mean "give up on this model and try the next one". As
+     * a bare block they would break the outer loop instead and silently end
+     * the fallback chain after the first failure.
+     */
+    for (let attempt = 1; attempt <= 1; attempt++) {
       try {
-        console.log(`[Gemini Core] Requesting model '${modelId}' (Attempt ${attempt})...`);
+        console.log(`[Gemini Core] Requesting model '${modelId}'...`);
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: {
@@ -111,13 +132,11 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
           const errorData = await response.json().catch(() => ({}));
           const errMsg = errorData.error?.message || `HTTP ${response.status} High Demand/Server Error`;
           lastError = new Error(`Gemini API Error (${response.status}): ${errMsg}`);
-          console.warn(`[Gemini Core] Model '${modelId}' returned ${response.status} (Attempt ${attempt}): ${errMsg}`);
+          console.warn(`[Gemini Core] Model '${modelId}' returned ${response.status}: ${errMsg}`);
           
-          if (attempt < 2) {
-            await sleep(1000 * attempt);
-            continue;
-          }
-          break; // Try next fallback model
+          // Straight to the next candidate: a model that is busy now is
+          // very unlikely to be free a second later.
+          break;
         }
 
         if (!response.ok) {
@@ -146,10 +165,7 @@ export const generateGeminiAnalysis = async (files, prompt, targetModel = "Gemin
         };
       } catch (err) {
         lastError = err;
-        console.error(`[Gemini Core] Technical Fault on model '${modelId}' (Attempt ${attempt}):`, err.message);
-        if (attempt < 2) {
-          await sleep(1000 * attempt);
-        }
+        console.error(`[Gemini Core] Technical Fault on model '${modelId}':`, err.message);
       }
     }
   }
